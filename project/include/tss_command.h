@@ -38,5 +38,6 @@ struct TSS_Setting_Response {
 };
 
 const struct TSS_Setting* tssGetSetting(const char *name);
+int tssSettingKeyCmp(const char* key, const char* key_format);
 
 #endif

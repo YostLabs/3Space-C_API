@@ -27,9 +27,12 @@ typedef enum TSS_StreamingCallbackState (*TssStreamingCallback)(TSS_Sensor *sens
 struct TSS_Sensor {
     struct TSS_Com_Class *com;
 
-    //Header and Data Information
+    //Config Info
     bool _header_enabled;
     struct TSS_Header_Info header_cfg;
+    bool _immediate_debug;
+
+    //Cached Data
     struct TSS_Header last_header;
     struct TSS_Setting_Response last_write_setting_response;
 
@@ -67,9 +70,26 @@ void initTssSensor(TSS_Sensor *sensor);
 //-------------------------------MANUAL MANAGEMENT-----------------------------------------
 void sensorUpdateCachedSettings(TSS_Sensor *sensor);
 
-//----------------------------HEADER RETURN INFORMATION--------------------------------------
-struct TSS_Header sensorGetLastHeader(TSS_Sensor *sensor);
-struct TSS_Setting_Response sensorGetLastSettingResponse(TSS_Sensor *sensor);
+/// @brief Should be called if changes are made to the sensor without using the sensor API.
+/// The sensor will automatically reinitialize to a known state next time an API function is called
+/// via the sensorUpdateCachedSettings function.
+/// @note This does not work with the Minimal API. If using the Minimal API, you must call sensorUpdateCachedSettings
+/// manually.
+/// @param sensor The sensor that had modifications made
+static inline void sensorMarkSettingsDirty(TSS_Sensor *sensor) {
+    sensor->dirty = true;
+}
+
+//----------------------------GETTERS--------------------------------------
+static inline struct TSS_Header sensorGetLastHeader(TSS_Sensor *sensor) {
+    return sensor->last_header;
+}
+static inline struct TSS_Setting_Response sensorGetLastSettingResponse(TSS_Sensor *sensor) {
+    return sensor->last_write_setting_response;
+}
+static inline bool sensorIsStreaming(TSS_Sensor *sensor) {
+    return sensor->streaming.data.active || sensor->streaming.file.active || sensor->streaming.log.active;
+}
 
 //--------------------------------BASE FUNCTIONALITY-----------------------------------------
 int sensorReadSettings(TSS_Sensor *sensor, const char *key_string, ...);

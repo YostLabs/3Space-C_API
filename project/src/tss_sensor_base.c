@@ -51,23 +51,17 @@ int sensorProcessFileStreamingCallbackOutput(TSS_Sensor *sensor, void *output, u
     return num_read;
 }
 
-struct TSS_Header sensorGetLastHeader(TSS_Sensor *sensor) {
-    return sensor->last_header;
-}
-
-struct TSS_Setting_Response sensorGetLastSettingResponse(TSS_Sensor *sensor)
-{
-    return sensor->last_write_setting_response;
-}
 
 #include <stdio.h>
 
 //--------------------------INTERNAL--------------------------------------
 void sensorInternalForceStopStreaming(TSS_Sensor *sensor)
 {   
-    bool header_was_enabled;
+    bool header_was_enabled, was_dirty;
     header_was_enabled = sensor->_header_enabled;
+    was_dirty = sensor->dirty;
     sensor->_header_enabled = false;
+    sensor->dirty = false;
 
     //These functions return no data, so can be called regardless of if available.
     //This affectively sends these and reads nothing by having header disabled for these
@@ -76,6 +70,7 @@ void sensorInternalForceStopStreaming(TSS_Sensor *sensor)
     sensorStopLogging(sensor);
 
     sensor->_header_enabled = header_was_enabled;
+    sensor->dirty = was_dirty;
 }
 
 //---------------------------------------STREAMING FUNCTIONALITY-------------------------------------------------

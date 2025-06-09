@@ -492,12 +492,12 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("gps_led", U8(1))
 };
 
-static inline int keycmp(const char* key, const char* key_format)
+int tssSettingKeyCmp(const char* key, const char* key_format)
 {
     //Stop once atleast one string ends
     while(*key != '\0' && *key_format != '\0') {
         //Advance until no match
-        if(*key == *key_format) {
+        if(tolower(*key) == *key_format) {
             key++;
             key_format++;
         }
@@ -522,8 +522,8 @@ static inline int keycmp(const char* key, const char* key_format)
         }
     }
     
-    if(*key == *key_format) return 0; //They are both '\0'
-    return (*key < *key_format) ? -1 : 1;
+    if(tolower(*key) == *key_format) return 0; //They are both '\0'
+    return (tolower(*key) < *key_format) ? -1 : 1;
 }
 
 const struct TSS_Setting* tssGetSetting(const char *name)
@@ -531,7 +531,7 @@ const struct TSS_Setting* tssGetSetting(const char *name)
     const struct TSS_Setting *setting;
     for(uint16_t i = 0; i < sizeof(m_settings) / sizeof(m_settings[0]); i++) {
         setting = &m_settings[i];
-        if(keycmp(name, setting->name) == 0) {
+        if(tssSettingKeyCmp(name, setting->name) == 0) {
             return setting;
         }
     }

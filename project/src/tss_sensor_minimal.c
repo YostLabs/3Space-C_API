@@ -1,3 +1,5 @@
+#include "tss_config.h"
+#if TSS_MINIMAL_SENSOR
 #include "tss_sensor.h"
 #include "tss_sensor_internal.h"
 #include "tss_api.h"
@@ -105,3 +107,5 @@ int sensorUpdateStreaming(TSS_Sensor *sensor)
         sensorInternalUpdateLogStreaming(sensor);
     }
 }
+
+#endif /* TSS_MINIMAL_SENSOR */
