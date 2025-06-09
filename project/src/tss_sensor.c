@@ -195,18 +195,24 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
     //to manually call updateCachedSettings when using the base API. Speed is not really a concern
     //for the settings protocol either since changes should be infrequent.
 
-    //Check for header keys
-    for(i = 0; i < num_keys; i++) {
-        if(keyInArray(keys[i], K_HEADER_KEYS, sizeof(K_HEADER_KEYS) / sizeof(K_HEADER_KEYS[0])) >= 0) {
-            cacheHeader(sensor);
-            break;
+    if(keyInArray("default", keys, num_keys) >= 0) {
+        sensorUpdateCachedSettings(sensor);
+    }
+    else {
+        //Check for header keys
+        for(i = 0; i < num_keys; i++) {
+            if(keyInArray(keys[i], K_HEADER_KEYS, sizeof(K_HEADER_KEYS) / sizeof(K_HEADER_KEYS[0])) >= 0) {
+                cacheHeader(sensor);
+                break;
+            }
+        }
+
+        //Check for stream slots
+        if(keyInArray("stream_slots", keys, num_keys) >= 0) {
+            cacheStreamSlots(sensor);
         }
     }
 
-    //Check for stream slots
-    if(keyInArray("stream_slots", keys, num_keys) >= 0) {
-        cacheStreamSlots(sensor);
-    }
 
     return result;
 }
