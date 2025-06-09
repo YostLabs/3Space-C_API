@@ -1,0 +1,28 @@
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.obj
+
+# Executables and Libraries
+*.exe
+*.lib
+*.a
+
+# Temporary files and build outputs
+*.stackdump
+*.log
+*.elf
+*.map
+
+# Debug files
+*.pdb
+
+# IDE and Editor specific files
+*.swp
+*~
+.*.swp
+.vscode/
+
+build/
