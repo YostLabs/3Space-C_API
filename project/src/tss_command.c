@@ -259,6 +259,26 @@ const struct TSS_Command* tssGetCommand(uint8_t num)
     return m_commands[num];
 }
 
+void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uint16_t *max_size)
+{   
+    uint8_t uncapped;
+    uint16_t size;
+
+    size = 0;
+    while(!TSS_PARAM_IS_NULL(params)) {
+        //Treat variable length as max
+        if(TSS_PARAM_IS_STRING(params)) {
+            uncapped = 1;
+        }
+
+        size += params->count * params->size;
+        params++;
+    }
+
+    *min_size = size;
+    *max_size = (uncapped) ? UINT16_MAX : size;
+}
+
 #define SETTING_START(_name) (const struct TSS_Setting) { .name = _name, 
 #define SETTING_END },
 

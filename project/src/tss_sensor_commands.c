@@ -10,7 +10,7 @@ int sensorGetStreamingBatch(TSS_Sensor *sensor, ...) {
     int result;
 
     va_start(outputs, sensor);
-    result = sensorInternalExecuteCommandCustomV(sensor, tssGetCommand(84), NULL, sensorInternalReadStreamingBatch, outputs);
+    result = sensorInternalExecuteCommandCustomV(sensor, tssGetCommand(84), NULL, sensorInternalProcessStreamingBatch, outputs);
     va_end(outputs);
     return result;
 }
@@ -94,6 +94,16 @@ int sensorStartLogging(TSS_Sensor *sensor, TssStreamingCallback cb) {
 int sensorStopLogging(TSS_Sensor *sensor) {
     sensor->streaming.log.active = false;
     return sensorInternalExecuteCommand(sensor, tssGetCommand(61), NULL);
+}
+
+//-------------------------------------TODO-----------------------------------------------
+int sensorSoftwareReset(TSS_Sensor *sensor) {
+    //Must not try and do any read after sending (no header).
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(226), NULL);
+}
+
+int sensorEnterBootloader(TSS_Sensor *sensor) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(229), NULL);
 }
 
 //-----------------------------------AUTO GENERATED--------------------------------------------
@@ -473,14 +483,6 @@ int sensorGetGPSSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites) {
 
 int sensorCommitSettings(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(225), NULL);
-}
-
-int sensorSoftwareReset(TSS_Sensor *sensor) {
-    return sensorInternalExecuteCommand(sensor, tssGetCommand(226), NULL);
-}
-
-int sensorEnterBootloader(TSS_Sensor *sensor) {
-    return sensorInternalExecuteCommand(sensor, tssGetCommand(229), NULL);
 }
 
 int sensorGetButtonState(TSS_Sensor *sensor, uint8_t *out_state) {

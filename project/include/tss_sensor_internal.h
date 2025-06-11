@@ -10,13 +10,22 @@ int sensorInternalExecuteCommand(TSS_Sensor *sensor, const struct TSS_Command *c
 int sensorInternalExecuteCommandV(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, va_list outputs);
 int sensorInternalExecuteCommandCustom(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunction read_func, ...);
 
-//This needs implemented per sensor type
+//These needs implemented per sensor type
+int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
 int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunction read_func, va_list outputs);
 
 //-----------------------Control-------------------------
 void sensorInternalForceStopStreaming(TSS_Sensor *sensor);
 
+//Frequently used helper
+static inline void sensorInternalHandleHeader(TSS_Sensor *sensor) {
+    if(sensor->_header_enabled) {
+        tssReadHeader(sensor->com, &sensor->header_cfg, &sensor->last_header);
+    }
+}
+
 //-----------------------Custom parsing-----------------------
+int sensorInternalProcessStreamingBatch(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
 int sensorInternalReadStreamingBatch(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
 int sensorInternalReadStreamingBatchChecksumOnly(TSS_Sensor *sensor);
 int sensorInternalUpdateDataStreaming(TSS_Sensor *sensor);

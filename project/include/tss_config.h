@@ -46,7 +46,7 @@
 //      Requires implementing the peek functions in the Com Class.
 //      Forces the command response header to always be enabled and to always have certain bits enabled.
 //          (These bits are automatically handled, the user is not required to worry about the configuration.)
-#define TSS_MINIMAL_SENSOR 1
+#define TSS_MINIMAL_SENSOR 0
 
 //Types
 #define TSS_ENDIAN_AUTO_DETECT 0

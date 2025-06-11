@@ -98,7 +98,7 @@ int sensorInternalReadStreamingBatchChecksumOnly(TSS_Sensor *sensor) {
     uint8_t checksum;
     int err_or_checksum;
     const struct TSS_Command **cur_slot;
-    
+
     checksum = 0;
     cur_slot = sensor->streaming.data.commands;
     while(*cur_slot != NULL) {
@@ -114,9 +114,7 @@ int sensorInternalReadStreamingBatchChecksumOnly(TSS_Sensor *sensor) {
 }
 
 int sensorInternalUpdateDataStreaming(TSS_Sensor *sensor) {
-    if(sensor->_header_enabled) {
-        tssReadHeader(sensor->com, &sensor->header_cfg, &sensor->last_header);
-    }
+    sensorInternalHandleHeader(sensor);
     enum TSS_StreamingCallbackState state = sensor->streaming.data.cb(sensor);
     if(state == TSS_StreamingCallbackStateIgnored) {
         sensorInternalReadStreamingBatchChecksumOnly(sensor);
@@ -128,9 +126,7 @@ int sensorInternalUpdateFileStreaming(TSS_Sensor *sensor)
 {
     uint16_t packet_len;
 
-    if(sensor->_header_enabled) {
-        tssReadHeader(sensor->com, &sensor->header_cfg, &sensor->last_header);
-    }
+    sensorInternalHandleHeader(sensor);
 
 #if TSS_MINIMAL_SENSOR
     if(sensor->streaming.file.remaining_len > TSS_FILE_STREAMING_MAX_PACKET_SIZE) {
@@ -173,11 +169,6 @@ int sensorInternalUpdateLogStreaming(TSS_Sensor *sensor) {
 }
 
 //------------------------WRAPPERS---------------------------------
-static int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs)
-{
-    return tssReadCommandV(sensor->com, command, outputs);
-}
-
 int sensorInternalExecuteCommand(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, ...)
 {
     va_list args;

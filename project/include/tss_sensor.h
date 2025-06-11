@@ -41,6 +41,7 @@ struct TSS_Sensor {
         struct {
             TssStreamingCallback cb;
             const struct TSS_Command* commands[17];
+            uint16_t output_size;
             bool active;
         } data;
         struct {

@@ -26,6 +26,11 @@ int tssReadCommandChecksumOnly(const struct TSS_Com_Class *com, const struct TSS
 
 
 int tssReadHeader(const struct TSS_Com_Class *com, const struct TSS_Header_Info *header_info, struct TSS_Header *out);
+int tssPeekHeader(const struct TSS_Com_Class *com, const struct TSS_Header_Info *header_info, struct TSS_Header *out);
+
+int tssPeekCommandChecksum(const struct TSS_Com_Class *com, uint16_t start, uint16_t len);
+int tssPeekValidateCommand(const struct TSS_Com_Class *com, 
+    uint8_t header_size, uint16_t header_len_field, uint8_t header_checksum_field, size_t min_data_len, size_t max_data_len);
 
 //Setting Helpers
 size_t tssBuildGetSettingsString(char *out, size_t out_size, uint16_t count, ...);

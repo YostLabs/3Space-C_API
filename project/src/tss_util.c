@@ -2,7 +2,7 @@
 #include "tss_string.h"
 #include "tss_constants.h"
 
-int tssUtilStreamSlotStringToCommands(const char *str, const struct TSS_Command* out[17])
+int tssUtilStreamSlotStringToCommands(const char *str, const struct TSS_Command* out[TSS_NUM_STREAM_SLOTS+1])
 {
     uint8_t num_slots_read = 0;
     struct TSS_Stream_Slot slot = {0};
@@ -33,7 +33,6 @@ int tssUtilStreamSlotStringToCommands(const char *str, const struct TSS_Command*
     }
 
     //Null terminate the command list
-    printf("Num slots read: %d\n", num_slots_read);
     out[num_slots_read] = NULL;
 
     return 0;

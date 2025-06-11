@@ -94,11 +94,84 @@ int tssReadHeader(const struct TSS_Com_Class *com, const struct TSS_Header_Info 
 {
     uint8_t data[TSS_HEADER_MAX_SIZE];
     if(header_info->size == 0) return 0;
-    com->in.read(header_info->size, data, com->user_data);
+    if(com->in.read(header_info->size, data, com->user_data) != header_info->size) {
+        return TSS_ERR_READ;
+    }
     
     tssHeaderFromBytes(header_info, data, out);
     return 0;
 }
+
+int tssPeekHeader(const struct TSS_Com_Class *com, const struct TSS_Header_Info *header_info, struct TSS_Header *out)
+{
+    uint8_t data[TSS_HEADER_MAX_SIZE];
+    if(header_info->size == 0) {
+        return 0;
+    }
+    if(com->in.peek(0, header_info->size, data, com->user_data) != header_info->size) {
+        return TSS_ERR_READ_LEN;
+    }
+    
+    tssHeaderFromBytes(header_info, data, out);
+    return 0;
+}
+
+int tssPeekValidateCommand(const struct TSS_Com_Class *com, 
+    uint8_t header_size, uint16_t header_len_field, uint8_t header_checksum_field, size_t min_data_len, size_t max_data_len) 
+{
+    int checksum;
+
+    //This is to prevent situations where the data_len field is corrupted to
+    //a really large values and causes read timeouts to frequently occur, essentially
+    //stalling validation, or when a lot of zeroes are sent causing a data_len of 0
+    //and checksum of 0 which gets validated successfully.
+    if(header_len_field > max_data_len || header_len_field < min_data_len) {
+        return TSS_ERR_UNEXPECTED_PACKET_LENGTH;
+    }
+
+    //Validate the checksum
+    checksum = tssPeekCommandChecksum(com, header_size, header_len_field);
+    if(checksum < 0) { //Error
+        return checksum;
+    }
+
+    if(checksum != header_checksum_field) {
+        return TSS_ERR_CHECKSUM_MISMATCH;
+    }
+
+    return TSS_SUCCESS;
+}
+
+int tssPeekCommandChecksum(const struct TSS_Com_Class *com, uint16_t start, uint16_t len) {
+    uint16_t i, read_len;
+    uint8_t j, checksum, data[40]; //Read 40 bytes at a time
+    int num_read;
+
+    checksum = 0;
+    for(i = 0; i < len; i+= sizeof(data)) {
+        //Figure out how much to peek
+        read_len = len - i;
+        if(sizeof(data) < read_len) {
+            read_len = sizeof(data);
+        }
+
+        //Peek in that amount, and validate it was successful
+        num_read = com->in.peek(i + start, read_len, data, com->user_data);
+        if(num_read != read_len) {
+            if(num_read < 0) {
+                return num_read;
+            }
+            return TSS_ERR_READ_LEN;
+        }
+
+        //Add to the checksum
+        for(j = 0; j < num_read; j++) {
+            checksum += data[j];
+        }
+    }
+
+    return checksum;
+} 
 
 //------------------------------------------SETTINGS PROTOCOL----------------------------------------------
 

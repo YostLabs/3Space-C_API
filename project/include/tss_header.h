@@ -34,6 +34,7 @@ struct TSS_Header {
 
 struct TSS_Header_Info tssHeaderInfoFromBitfield(uint8_t bitfield);
 uint8_t tssHeaderSizeFromBitfield(uint8_t bitfield);
+uint8_t tssHeaderPosFromBitfield(uint8_t bitfield, uint8_t bit);
 void tssHeaderFromBytes(const struct TSS_Header_Info *info, uint8_t *data, struct TSS_Header *out);
 
 #endif /* __TSS_HEADER_H__ */

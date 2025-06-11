@@ -12,6 +12,14 @@
 
 #define REQUIRED_HEADER_BITS (TSS_HEADER_CHECKSUM_BIT | TSS_HEADER_LENGTH_BIT | TSS_HEADER_ECHO_BIT)
 
+#define THREESPACE_AWAIT_COMMAND_FOUND 0
+#define THREESPACE_AWAIT_COMMAND_TIMEOUT 1
+#define THREESPACE_AWAIT_BOOTLOADER 2
+
+#define THREESPACE_UPDATE_COMMAND_PARSED 0
+#define THREESPACE_UPDATE_COMMAND_MISALIGNED 1
+#define THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA 2
+
 void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 {
     *sensor = (TSS_Sensor) {
@@ -23,7 +31,14 @@ void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 
 static void cacheHeader(TSS_Sensor *sensor);
 static void cacheStreamSlots(TSS_Sensor *sensor);
+
 static void initFirmware(TSS_Sensor *sensor);
+
+static inline void handleMisalignment(TSS_Sensor *sensor);
+static int peekValidatePacket(TSS_Sensor *sensor, const struct TSS_Header *header, size_t min_data_len, size_t max_data_len);
+static struct TSS_Header* tryPeekHeader(TSS_Sensor *sensor, struct TSS_Header *out);
+static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header);
+static int awaitCommandResponse(TSS_Sensor *sensor, uint8_t cmd_num, uint16_t min_data_len, uint16_t max_data_len);
 
 void initTssSensor(TSS_Sensor *sensor) {
     sensorInternalForceStopStreaming(sensor);
@@ -43,6 +58,8 @@ static void initFirmware(TSS_Sensor *sensor) {
     sensor->dirty = false;
     sensorUpdateCachedSettings(sensor);
 }
+
+//----------------------------------CACHEING FUNCTIONS-------------------------------------------
 
 static void cacheHeader(TSS_Sensor *sensor) {
     uint8_t header;
@@ -65,9 +82,18 @@ static void cacheHeader(TSS_Sensor *sensor) {
 
 static void cacheStreamSlots(TSS_Sensor *sensor) {
     char stream_slots[130];
-    printf("Updating stream slots.\n");
+    uint16_t output_size, size;
+    uint8_t i;
+    
     sensorReadStreamSlots(sensor, stream_slots, sizeof(stream_slots));
     tssUtilStreamSlotStringToCommands(stream_slots, sensor->streaming.data.commands);
+    
+    output_size = 0;
+    for(i = 0; i < TSS_NUM_STREAM_SLOTS && sensor->streaming.data.commands[i] != NULL; i++) {
+        tssGetParamListSize(sensor->streaming.data.commands[i]->out_format, &size, &size);
+        output_size += size;
+    }
+    sensor->streaming.data.output_size = output_size;
 }
 
 void sensorUpdateCachedSettings(TSS_Sensor *sensor) {
@@ -101,20 +127,41 @@ static void checkDirty(TSS_Sensor *sensor) {
     sensor->dirty = false;
 }
 
+//--------------------------------GENERIC FUNCTIONS-------------------------------------
+
 int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunction read_func, va_list outputs)
 {
     int err_or_checksum;
     checkDirty(sensor);
     tssWriteCommand(sensor->com, sensor->_header_enabled, command, input);
-    if(sensor->_header_enabled) {
-        tssReadHeader(sensor->com, &sensor->header_cfg, &sensor->last_header);
-    }
     err_or_checksum = read_func(sensor, command, outputs);
     if(err_or_checksum < 0) return err_or_checksum; //Return the error
     return TSS_SUCCESS; //No error
 }
 
-//--------------------------------GENERIC FUNCTIONS-------------------------------------
+int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs)
+{
+    int result;
+    uint16_t min_size, max_size;
+    tssGetParamListSize(command->out_format, &min_size, &max_size);
+    result = awaitCommandResponse(sensor, command->num, min_size, max_size);
+    if(result != THREESPACE_AWAIT_COMMAND_FOUND) {
+        return TSS_ERR_TIMEOUT;
+    }
+    sensorInternalHandleHeader(sensor);
+    return tssReadCommandV(sensor->com, command, outputs);
+}
+
+int sensorInternalProcessStreamingBatch(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs)
+{
+    int result;
+    result = awaitCommandResponse(sensor, command->num, sensor->streaming.data.output_size, sensor->streaming.data.output_size);
+    if(result != THREESPACE_AWAIT_COMMAND_FOUND) {
+        return TSS_ERR_TIMEOUT;
+    }
+    sensorInternalHandleHeader(sensor);
+    return sensorInternalReadStreamingBatch(sensor, command, outputs);
+}
 
 int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outputs)
 {
@@ -219,16 +266,137 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
 
 int sensorUpdateStreaming(TSS_Sensor *sensor)
 {
+    struct TSS_Header header;
+    tss_time_t start_time;
+    int result;
     checkDirty(sensor);
-    if(sensor->streaming.data.active) {
-        sensorInternalUpdateDataStreaming(sensor);
-    }
-    if(sensor->streaming.file.active) {
-        sensorInternalUpdateFileStreaming(sensor);
-    }  
-    if(sensor->streaming.log.active) {
-        sensorInternalUpdateLogStreaming(sensor);
-    }
+    
+    start_time = sensor->com->time.get();
+    //Update until either a command is successfully parsed or not enough data for a command
+    //Mainly just don't want to have to call this function multiple times to fix misalignments.
+    do {
+        if(sensor->com->in.length(sensor->com->user_data) < sensor->header_cfg.size) {
+            return false;
+        }
+
+        tssPeekHeader(sensor->com, &sensor->header_cfg, &header);
+        result = internalUpdate(sensor, &header);
+    } while(result == THREESPACE_UPDATE_COMMAND_MISALIGNED && 
+            sensor->com->time.diff(start_time) < sensor->com->in.get_timeout(sensor->com->user_data));
+
+    return result == THREESPACE_UPDATE_COMMAND_PARSED;
 }
+
+//-------------------------------------------AWAITING/ALIGNMENT FUNCTIONS--------------------------------------------
+
+static inline void handleMisalignment(TSS_Sensor *sensor) {
+    //Continously read 1 byte until aligned
+    uint8_t tmp;
+    sensor->com->in.read(1, &tmp, sensor->com->user_data);
+}
+
+
+/// @brief Fast fail version of peeking a header that returns a pointer to the out
+/// structure or NULL if no header to peek.
+static struct TSS_Header* tryPeekHeader(TSS_Sensor *sensor, struct TSS_Header *out) {
+    int err;
+    if(sensor->com->in.length(sensor->com->user_data) < sensor->header_cfg.size) {
+        return NULL;
+    }
+    err = tssPeekHeader(sensor->com, &sensor->header_cfg, out);
+    if(err) {
+        return NULL;
+    }
+    return out;
+}
+
+static int peekValidatePacket(TSS_Sensor *sensor, const struct TSS_Header *header, size_t min_data_len, size_t max_data_len)
+{
+    int err;
+    err = tssPeekValidateCommand(sensor->com, sensor->header_cfg.size, 
+        header->length, header->checksum, min_data_len, max_data_len);
+    if(err == TSS_ERR_INSUFFICIENT_BUFFER) {
+        //Pretend this is a success, the com class internal buffer
+        //is not big enough to validate. The validation will be performed
+        //by the read operation. This does mean if it actually is invalid
+        //more data will be lost then normal.
+        //TODO: Add a warning mechanism here.
+        return TSS_SUCCESS; 
+    }
+    return err;
+}
+
+static int awaitCommandResponse(TSS_Sensor *sensor, uint8_t cmd_num, uint16_t min_data_len, uint16_t max_data_len) {
+    int err;
+    tss_time_t start_time;
+    struct TSS_Header header;
+
+    //Nothing to do but pretend it was found. Can't check if header isn't enabled.
+    if(!sensor->_header_enabled) return THREESPACE_AWAIT_COMMAND_FOUND;
+
+    start_time = sensor->com->time.get();
+    while(sensor->com->time.diff(start_time) < sensor->com->in.get_timeout(sensor->com->user_data)) {
+        err = tssPeekHeader(sensor->com, &sensor->header_cfg, &header);
+        if(err) {
+            continue;
+        }
+
+        if(header.echo == cmd_num) {
+            if(peekValidatePacket(sensor, &header, min_data_len, max_data_len) == 0) {
+                return THREESPACE_AWAIT_COMMAND_FOUND;
+            }
+            handleMisalignment(sensor);
+        }
+        else {
+            //The data read was not a response to the command being awaited, but
+            //may be a response to something else, so call the internal update system to handle
+            internalUpdate(sensor, &header);
+        }
+        
+    }
+
+    return THREESPACE_AWAIT_COMMAND_TIMEOUT;
+}
+
+static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header) {
+    uint16_t expected_out_size;
+    if(header != NULL) {
+        
+        if(sensor->streaming.data.active && header->echo == TSS_STREAMING_DATA_BATCH_COMMAND_NUM) {
+            expected_out_size = sensor->streaming.data.output_size;
+            if(sensor->com->in.length(sensor->com->user_data) < expected_out_size + sensor->header_cfg.size) {
+                return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
+            }
+            if(peekValidatePacket(sensor, header, expected_out_size, expected_out_size) == TSS_SUCCESS) {
+                sensorInternalUpdateDataStreaming(sensor);
+                return THREESPACE_UPDATE_COMMAND_PARSED;
+            }
+        }
+        else if(sensor->streaming.log.active && header->echo == TSS_STREAMING_FILE_READ_BYTES_COMMAND_NUM) {
+            expected_out_size = (header->length < TSS_LOG_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_LOG_STREAMING_MAX_PACKET_SIZE;
+            if(sensor->com->in.length(sensor->com->user_data) < expected_out_size + sensor->header_cfg.size) {
+                return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
+            }
+            if(peekValidatePacket(sensor, header, expected_out_size, expected_out_size) == TSS_SUCCESS) {
+                sensorInternalUpdateLogStreaming(sensor);
+                return THREESPACE_UPDATE_COMMAND_PARSED;
+            }
+        }
+        else if(sensor->streaming.file.active && header->echo == TSS_STREAMING_FILE_READ_BYTES_COMMAND_NUM) {
+            expected_out_size = (header->length < TSS_FILE_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_FILE_STREAMING_MAX_PACKET_SIZE;
+            if(sensor->com->in.length(sensor->com->user_data) < expected_out_size + sensor->header_cfg.size) {
+                return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
+            }
+            if(peekValidatePacket(sensor, header, expected_out_size, expected_out_size) == TSS_SUCCESS) {
+                sensorInternalUpdateFileStreaming(sensor);
+                return THREESPACE_UPDATE_COMMAND_PARSED;
+            }
+        }
+    }
+
+    handleMisalignment(sensor);
+    return THREESPACE_UPDATE_COMMAND_MISALIGNED;
+}
+
 
 #endif /* !TSS_MINIMAL_SENSOR */

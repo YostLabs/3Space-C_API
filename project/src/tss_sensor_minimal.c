@@ -55,13 +55,22 @@ void sensorUpdateCachedSettings(TSS_Sensor *sensor) {
     tssUtilStreamSlotStringToCommands(stream_slots, sensor->streaming.data.commands);
 }
 
+int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs)
+{
+    sensorInternalHandleHeader(sensor);
+    return tssReadCommandV(sensor->com, command, outputs);
+}
+
+int sensorInternalProcessStreamingBatch(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs)
+{
+    sensorInternalHandleHeader(sensor);
+    return sensorInternalReadStreamingBatch(sensor, command, outputs);
+}
+
 int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunction read_func, va_list outputs)
 {
     int err_or_checksum;
     tssWriteCommand(sensor->com, sensor->_header_enabled, command, input);
-    if(sensor->_header_enabled) {
-        tssReadHeader(sensor->com, &sensor->header_cfg, &sensor->last_header);
-    }
     err_or_checksum = read_func(sensor, command, outputs);
     if(err_or_checksum < 0) return err_or_checksum; //Return the error
     return TSS_SUCCESS; //No error
