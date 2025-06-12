@@ -22,6 +22,7 @@
 inline static void send_params(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, const void ***raw_data, uint8_t *checksum);
 inline static void send_param(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, const uint8_t *raw_data, uint8_t *checksum);
 #if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
+inline static void swap_endianess(uint8_t *data, uint16_t p_size);
 inline static void swap_singular_param_endianess(uint8_t *data, const struct TSS_Param *param);
 inline static void swap_param_endianess(uint8_t *data, const struct TSS_Param *param);
 #endif
@@ -265,9 +266,9 @@ size_t tssBuildGetSettingsStringBinary(uint8_t *out, size_t out_size, uint16_t c
     return out_len;
 }
 
-int tssGetSettingsWrite(const struct TSS_Com_Class *com, const char *key_string)
+int tssGetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char *key_string)
 {
-    const static uint8_t start_byte = TSS_BINARY_READ_SETTINGS_START_BYTE;
+    const uint8_t start_byte = (header) ? TSS_BINARY_READ_SETTINGS_HEADER_START_BYTE : TSS_BINARY_READ_SETTINGS_START_BYTE;
 
     size_t key_len;
     uint8_t checksum;
@@ -319,14 +320,13 @@ int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback
             return TSS_ERR_READ;
         }
 
-        //Key Error. Unkown how to continue parsing, return
-        if(key[0] == '\xFF') {
-            printf("Invalid Key!\n");
-            return TSS_ERR_SETTING_KEY_INVALID;
-        }
-
         setting = tssGetSetting(key);
         if(setting == NULL) { //Unregistered key
+            if(strcmp(key, TSS_SETTING_KEY_ERR_STRING) == 0) {
+                //Key Error. Unkown how to continue parsing, return
+                printf("Invalid Key!\n");
+                return TSS_ERR_SETTING_KEY_INVALID;    
+            }
             printf("Unregistered Key: %s\n", key);
             return TSS_ERR_SETTING_KEY_UNREGISTERED;
         }
@@ -421,10 +421,10 @@ int tssGetSettingsReadV(const struct TSS_Com_Class *com, va_list args)
     return (result != TSS_ERR_GET_SETTING_CALLBACK) ? result : user_data.result;
 }
 
-int tssSetSettingsWrite(const struct TSS_Com_Class *com, const char **keys, uint8_t num_keys, const void **data)
+int tssSetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char **keys, uint8_t num_keys, const void **data)
 {
-    const static uint8_t start_byte = TSS_BINARY_WRITE_SETTINGS_START_BYTE;
     const static uint8_t separator = TSS_SETTING_SEPARATOR;
+    const uint8_t start_byte = (header) ? TSS_BINARY_WRITE_SETTINGS_HEADER_START_BYTE : TSS_BINARY_WRITE_SETTINGS_START_BYTE;
 
     const struct TSS_Setting *setting;
     uint8_t key_index, checksum;
@@ -488,6 +488,25 @@ int tssSetSettingsRead(const struct TSS_Com_Class *com, struct TSS_Setting_Respo
     return TSS_SUCCESS;
 }
 
+
+int tssReadSettingsHeader(const struct TSS_Com_Class *com, uint32_t *id) {
+    int result;
+    result = com->in.read(TSS_BINARY_SETTINGS_ID_SIZE, (uint8_t*)id, com->user_data);
+#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
+    swap_endianess((uint8_t*)id, TSS_BINARY_SETTINGS_ID_SIZE);
+#endif
+    return result;
+}
+
+int tssPeekSettingsHeader(const struct TSS_Com_Class *com, uint32_t *id) {
+    int result;
+    result = com->in.peek(0, TSS_BINARY_SETTINGS_ID_SIZE, (uint8_t*)id, com->user_data);
+#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
+    swap_endianess((uint8_t*)id, TSS_BINARY_SETTINGS_ID_SIZE);
+#endif
+    return result;
+}
+
 //-----------------------HELPER FUNCTIONS------------------------------
 //Mostly to help handle endianness
 
@@ -542,14 +561,19 @@ inline static void send_param(const struct TSS_Com_Class *com, const struct TSS_
 }
 
 #if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
+inline static void swap_endianess(uint8_t *data, uint16_t p_size) 
+{
+    uint8_t i, tmp;
+    for(i = 0; i < p_size / 2; i++) {
+        tmp = data[i];
+        data[i] = data[p_size-1-i];
+        data[p_size-1-i] = tmp;
+    }
+}
+
 //Swaps a singular element. So if an array of floats, just swaps 1 float
 inline static void swap_singular_param_endianess(uint8_t *data, const struct TSS_Param *param) {
-    uint8_t i, tmp;
-    for(i = 0; i < param->size / 2; i++) {
-        tmp = data[i];
-        data[i] = data[param->size-1-i];
-        data[param->size-1-i] = tmp;
-    }
+    swap_endianess(data, param->size);
 }
 
 //Swaps all elements. So if an array of floats, swaps all the floats.

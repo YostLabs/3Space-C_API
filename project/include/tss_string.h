@@ -21,4 +21,6 @@ int tolower(int c);
 
 #endif
 
+size_t str_len_until(const char *str, char value);
+
 #endif /* __TSS_STRING_H__ */

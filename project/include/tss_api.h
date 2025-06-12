@@ -52,13 +52,18 @@ struct TSS_GetSettingsCallbackInfo {
 
 typedef enum TSS_SettingsCallbackState (*TssGetSettingsCallback)(struct TSS_GetSettingsCallbackInfo info, void *user_data);
 
-int tssGetSettingsWrite(const struct TSS_Com_Class *com, const char *key_string);
+int tssGetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char *key_string);
 int tssGetSettingsRead(const struct TSS_Com_Class *com, ...);
 int tssGetSettingsReadV(const struct TSS_Com_Class *com, va_list args);
 int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback callback, void *user_data);
 
-int tssSetSettingsWrite(const struct TSS_Com_Class *com, const char **keys, uint8_t num_keys, const void **data);
+int tssSetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char **keys, uint8_t num_keys, const void **data);
 int tssSetSettingsRead(const struct TSS_Com_Class *com, struct TSS_Setting_Response *response);
+
+//The settings header is actually just an ID appended to the 
+//beggining of the response to help with framing
+int tssReadSettingsHeader(const struct TSS_Com_Class *com, uint32_t *id);
+int tssPeekSettingsHeader(const struct TSS_Com_Class *com, uint32_t *id);
 
 //Low Level Reading Functions
 int tssReadParams(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum, ...);

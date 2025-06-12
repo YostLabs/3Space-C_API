@@ -29,3 +29,13 @@ int tolower(int c)
 }
 
 #endif
+
+size_t str_len_until(const char *str, char value) {
+    size_t len;
+    
+    len = 0;
+    while(*str != '\0' && *str != value) {
+        len++; str++;
+    }
+    return len;
+}

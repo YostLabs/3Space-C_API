@@ -16,12 +16,14 @@
 struct TSS_Input_Stream {
     //Read functions return the number of bytes read
     int (*read)(size_t num_bytes, uint8_t *out, void *user_data);
-    int(*read_until)(uint8_t value, uint8_t *out, size_t size, void *user_data);
 
     //Peek functions return the number of bytes read
     //If not enough internal buffer space to peek the requested amount,
     //return TSS_ERR_INSUFFICIENT_BUFFER
     int (*peek)(size_t start, size_t num_bytes, uint8_t *out, void *user_data);
+
+    //These should include up to and including the value specified by value
+    int(*read_until)(uint8_t value, uint8_t *out, size_t size, void *user_data);
     int(*peek_until)(size_t start, uint8_t value, uint8_t *out, size_t size, void *user_data);
 
     size_t (*length)(void *user_data);

@@ -81,7 +81,7 @@ int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Com
 int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outputs)
 {
     int result;
-    tssGetSettingsWrite(sensor->com, key_string);
+    tssGetSettingsWrite(sensor->com, false, key_string);
     result = tssGetSettingsReadV(sensor->com, outputs);
 
     //Failed to read, likely left over unparsed data. Clear it out to attempt to recover
@@ -93,14 +93,14 @@ int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outp
 
 int sensorReadSettingsQuery(TSS_Sensor *sensor, const char *key_string, TssGetSettingsCallback cb, void *user_data)
 {
-    tssGetSettingsWrite(sensor->com, key_string);
+    tssGetSettingsWrite(sensor->com, false, key_string);
     return tssGetSettingsReadCb(sensor->com, cb, user_data);
 }
 
 int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys, 
     const void **data)
 {
-    tssSetSettingsWrite(sensor->com, keys, num_keys, data);
+    tssSetSettingsWrite(sensor->com, false, keys, num_keys, data);
     return tssSetSettingsRead(sensor->com, &sensor->last_write_setting_response);
 }
 

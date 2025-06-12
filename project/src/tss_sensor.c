@@ -34,11 +34,15 @@ static void cacheStreamSlots(TSS_Sensor *sensor);
 
 static void initFirmware(TSS_Sensor *sensor);
 
+//----------------------------------------ALIGNMENT & VALIDATION FUNCTIONS-----------------------------------------
 static inline void handleMisalignment(TSS_Sensor *sensor);
 static int peekValidatePacket(TSS_Sensor *sensor, const struct TSS_Header *header, size_t min_data_len, size_t max_data_len);
 static struct TSS_Header* tryPeekHeader(TSS_Sensor *sensor, struct TSS_Header *out);
+
 static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header);
 static int awaitCommandResponse(TSS_Sensor *sensor, uint8_t cmd_num, uint16_t min_data_len, uint16_t max_data_len);
+static int awaitGetSettingResponse(TSS_Sensor *sensor, uint16_t min_len, bool check_bootloader);
+static int awaitSetSettingResponse(TSS_Sensor *sensor, uint16_t num_keys);
 
 void initTssSensor(TSS_Sensor *sensor) {
     sensorInternalForceStopStreaming(sensor);
@@ -146,7 +150,7 @@ int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *
     tssGetParamListSize(command->out_format, &min_size, &max_size);
     result = awaitCommandResponse(sensor, command->num, min_size, max_size);
     if(result != THREESPACE_AWAIT_COMMAND_FOUND) {
-        return TSS_ERR_TIMEOUT;
+        return TSS_RESPONSE_NOT_FOUND;
     }
     sensorInternalHandleHeader(sensor);
     return tssReadCommandV(sensor->com, command, outputs);
@@ -157,30 +161,50 @@ int sensorInternalProcessStreamingBatch(TSS_Sensor *sensor, const struct TSS_Com
     int result;
     result = awaitCommandResponse(sensor, command->num, sensor->streaming.data.output_size, sensor->streaming.data.output_size);
     if(result != THREESPACE_AWAIT_COMMAND_FOUND) {
-        return TSS_ERR_TIMEOUT;
+        return TSS_RESPONSE_NOT_FOUND;
     }
     sensorInternalHandleHeader(sensor);
     return sensorInternalReadStreamingBatch(sensor, command, outputs);
 }
 
+//Common to both read setting functions
+inline static int baseReadSettings(TSS_Sensor *sensor, const char *key_string)
+{
+    uint32_t id;
+    uint16_t min_response_len;
+    checkDirty(sensor);
+    tssGetSettingsWrite(sensor->com, true, key_string);
+
+    //+1 is because the terminating character/delimiter is also required in the response.
+    min_response_len = str_len_until(key_string, ';') + 1 + TSS_BINARY_SETTINGS_ID_SIZE;
+    if(min_response_len > TSS_SETTING_KEY_ERR_STRING_LEN + 1 + TSS_BINARY_SETTINGS_ID_SIZE) {
+        min_response_len = TSS_SETTING_KEY_ERR_STRING_LEN + 1 + TSS_BINARY_SETTINGS_ID_SIZE;
+    }
+    if(awaitGetSettingResponse(sensor, min_response_len, false) != THREESPACE_AWAIT_COMMAND_FOUND) {
+        return TSS_RESPONSE_NOT_FOUND;
+    }  
+
+    tssReadSettingsHeader(sensor->com, &id);
+    return TSS_SUCCESS;
+}
+
 int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outputs)
 {
     int result;
-    checkDirty(sensor);
-    tssGetSettingsWrite(sensor->com, key_string);
-    result = tssGetSettingsReadV(sensor->com, outputs);
-
-    //Failed to read, likely left over unparsed data. Clear it out to attempt to recover
+    result = baseReadSettings(sensor, key_string);
     if(result < 0) {
-        sensor->com->in.clear_immediate(sensor->com->user_data);
+        return result;
     }
-    return result;
+    return tssGetSettingsReadV(sensor->com, outputs);
 }
 
 int sensorReadSettingsQuery(TSS_Sensor *sensor, const char *key_string, TssGetSettingsCallback cb, void *user_data)
 {
-    checkDirty(sensor);
-    tssGetSettingsWrite(sensor->com, key_string);
+    int result;
+    result = baseReadSettings(sensor, key_string);
+    if(result < 0) {
+        return result;
+    }
     return tssGetSettingsReadCb(sensor->com, cb, user_data);
 }
 
@@ -227,6 +251,7 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
     const void **data)
 {
     int result;
+    uint32_t id;
     uint16_t i;
 
     checkDirty(sensor);
@@ -235,7 +260,13 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
     //reading the response (since debug messages may be output immediately before the response happens)
     checkAndCacheDebugMode(sensor, keys, num_keys, data);
 
-    tssSetSettingsWrite(sensor->com, keys, num_keys, data);
+    tssSetSettingsWrite(sensor->com, true, keys, num_keys, data);
+
+    if(awaitSetSettingResponse(sensor, num_keys) != THREESPACE_AWAIT_COMMAND_FOUND) {
+        return TSS_RESPONSE_NOT_FOUND;
+    }
+
+    tssReadSettingsHeader(sensor->com, &id);
     result = tssSetSettingsRead(sensor->com, &sensor->last_write_setting_response);
 
     //Check for keys that may need cacheing. This is done here to allow the user to not have
@@ -260,6 +291,9 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
         }
     }
 
+    if(result < 0) {
+        printf("Failed to write: %s %d\n", keys[0], result);
+    }
 
     return result;
 }
@@ -355,6 +389,108 @@ static int awaitCommandResponse(TSS_Sensor *sensor, uint8_t cmd_num, uint16_t mi
         
     }
 
+    return THREESPACE_AWAIT_COMMAND_TIMEOUT;
+}
+
+static int awaitGetSettingResponse(TSS_Sensor *sensor, uint16_t min_len, bool check_bootloader)
+{
+    struct TSS_Header header;
+    const struct TSS_Setting *setting;
+    char buffer[TSS_MAX_SETTINGS_KEY_LEN];
+    int num_read_or_err;
+    uint32_t id;
+    tss_time_t start_time;
+
+    char boot_check[3] = {0};
+
+    //Size of the header
+    if(min_len < TSS_BINARY_SETTINGS_ID_SIZE) {
+        min_len = TSS_BINARY_SETTINGS_ID_SIZE;
+    }
+
+    start_time = sensor->com->time.get();
+    while(sensor->com->time.diff(start_time) < sensor->com->in.get_timeout(sensor->com->user_data)) {
+        if(sensor->com->in.length(sensor->com->user_data) < min_len) {
+            continue;
+        }
+
+        if(check_bootloader) {
+            sensor->com->in.peek(0, 2, boot_check, sensor->com->user_data);
+            if(strcmp(boot_check, "OK") == 0) {
+                return THREESPACE_AWAIT_BOOTLOADER;
+            }
+        }
+
+        //Check for the ID/Echo for getting settings
+        tssPeekSettingsHeader(sensor->com, &id);
+        if(id != TSS_BINARY_READ_SETTINGS_ID) {
+            internalUpdate(sensor, tryPeekHeader(sensor, &header));
+            continue;
+        }
+
+        //Check to see if the response after the ID looks like a setting
+        num_read_or_err = sensor->com->in.peek_until(TSS_BINARY_SETTINGS_ID_SIZE, '\0', buffer, sizeof(buffer), sensor->com->user_data);
+        if(num_read_or_err <= 0) {
+            //May just not have enough data yet
+            continue;
+        }
+
+        if(buffer[num_read_or_err-1] != '\0') {
+            internalUpdate(sensor, tryPeekHeader(sensor, &header));
+            continue;
+        }
+
+        setting = tssGetSetting(buffer);
+        if(setting == NULL && strcmp(buffer, TSS_SETTING_KEY_ERR_STRING) != 0) {
+            internalUpdate(sensor, tryPeekHeader(sensor, &header));
+            continue;
+        }
+
+        //Good enough, this is more then likely a GetSetting response
+        return THREESPACE_AWAIT_COMMAND_FOUND;
+    }
+
+    return THREESPACE_AWAIT_COMMAND_TIMEOUT;
+}
+
+static int awaitSetSettingResponse(TSS_Sensor *sensor, uint16_t num_keys)
+{
+    struct TSS_Header header;
+    uint8_t buffer[TSS_BINARY_WRITE_SETTING_RESPONSE_LEN], err, num_success, checksum;
+    uint32_t id;
+    tss_time_t start_time;
+
+    start_time = sensor->com->time.get();
+    while(sensor->com->time.diff(start_time) < sensor->com->in.get_timeout(sensor->com->user_data)) {
+        if(sensor->com->in.length(sensor->com->user_data) < TSS_BINARY_WRITE_SETTING_WITH_HEADER_RESPONSE_LEN) {
+            continue;
+        }
+        
+        //Check for the ID/Echo for getting settings
+        tssPeekSettingsHeader(sensor->com, &id);
+        if(id != TSS_BINARY_WRITE_SETTINGS_ID) {
+            internalUpdate(sensor, tryPeekHeader(sensor, &header));
+            continue;
+        }
+
+        //Peek the full response and validate the checksum and proper format
+        //No need to check the response length because the length was already validated by the first if statement
+        sensor->com->in.peek(TSS_BINARY_SETTINGS_ID_SIZE, TSS_BINARY_WRITE_SETTING_RESPONSE_LEN, buffer, sensor->com->user_data);
+        err = buffer[0];
+        num_success = buffer[1];
+        checksum = buffer[2];
+
+        if( (checksum != err + num_success) ||  //Mismatch Checksum
+            (err == TSS_SUCCESS && num_success != num_keys) || //Success but not all success?
+            (err != TSS_SUCCESS && num_success >= num_keys) || //Not success but all success?
+            (num_success > num_keys)) //Invalid num_success value
+        {
+            internalUpdate(sensor, tryPeekHeader(sensor, &header));
+            continue;
+        }
+
+        return THREESPACE_AWAIT_COMMAND_FOUND;
+    }
     return THREESPACE_AWAIT_COMMAND_TIMEOUT;
 }
 
