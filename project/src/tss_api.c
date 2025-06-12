@@ -11,8 +11,8 @@
 
 //----------------------------------HELPERS---------------------------------------
 #if TSS_BUFFERED_WRITES
-#define BEGIN_WRITE(com) ((com)->out.begin_write((com)))
-#define END_WRITE(com) ((com)->out.end_write((com)))
+#define BEGIN_WRITE(com) ((com)->out.begin_write((com->user_data)))
+#define END_WRITE(com) ((com)->out.end_write((com->user_data)))
 #else
 #define BEGIN_WRITE(com)
 #define END_WRITE(com)
