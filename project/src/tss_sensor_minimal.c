@@ -93,8 +93,15 @@ int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outp
 
 int sensorReadSettingsQuery(TSS_Sensor *sensor, const char *key_string, TssGetSettingsCallback cb, void *user_data)
 {
+    int result;
     tssGetSettingsWrite(sensor->com, false, key_string);
-    return tssGetSettingsReadCb(sensor->com, cb, user_data);
+    result = tssGetSettingsReadCb(sensor->com, cb, user_data);
+
+    //Failed to read, likely left over unparsed data. Clear it out to attempt to recover
+    if(result < 0) {
+        sensor->com->in.clear_immediate(sensor->com->user_data);
+    }    
+    return result;
 }
 
 int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys, 
