@@ -15,14 +15,14 @@
 
 //-----------------------------TYPE DECLARATIONS-----------------------------------
 
-enum TSS_StreamingCallbackState {
-    TSS_StreamingCallbackStateError = -1,
-    TSS_StreamingCallbackStateIgnored = 0,
-    TSS_StreamingCallbackStateProcessed = 1
+enum TSS_DataCallbackState {
+    TSS_DataCallbackStateError = -1,
+    TSS_DataCallbackStateIgnored = 0,
+    TSS_DataCallbackStateProcessed = 1
 };
 
 typedef struct TSS_Sensor TSS_Sensor;
-typedef enum TSS_StreamingCallbackState (*TssStreamingCallback)(TSS_Sensor *sensor);
+typedef enum TSS_DataCallbackState (*TssDataCallback)(TSS_Sensor *sensor);
 
 struct TSS_Sensor {
     struct TSS_Com_Class *com;
@@ -30,7 +30,13 @@ struct TSS_Sensor {
     //Config Info
     bool _header_enabled;
     struct TSS_Header_Info header_cfg;
-    bool _immediate_debug;
+
+    struct {
+        TssDataCallback cb;
+        uint16_t bytes_read;
+        bool _immediate;
+        bool message_processed;
+    } debug;
 
     //Cached Data
     struct TSS_Header last_header;
@@ -39,19 +45,19 @@ struct TSS_Sensor {
     //Streaming Information
     struct {
         struct {
-            TssStreamingCallback cb;
+            TssDataCallback cb;
             const struct TSS_Command* commands[17];
             uint16_t output_size;
             bool active;
         } data;
         struct {
-            TssStreamingCallback cb;
+            TssDataCallback cb;
             uint64_t remaining_len;
             uint16_t remaining_cur_packet_len;
             bool active;
         } file;
         struct {
-            TssStreamingCallback cb;
+            TssDataCallback cb;
             uint8_t header_enabled;
             bool active;
         } log;
@@ -81,6 +87,14 @@ static inline void sensorMarkSettingsDirty(TSS_Sensor *sensor) {
     sensor->dirty = true;
 }
 
+//----------------------------SETTERS--------------------------------------
+static inline void sensorSetDebugCallback(TSS_Sensor *sensor, TssDataCallback callback) {
+    sensor->debug.cb = callback;
+}
+static inline void sensorSetUserData(TSS_Sensor *sensor, void *user_data) {
+    sensor->user_data = user_data;
+}
+
 //----------------------------GETTERS--------------------------------------
 static inline struct TSS_Header sensorGetLastHeader(TSS_Sensor *sensor) {
     return sensor->last_header;
@@ -90,6 +104,9 @@ static inline struct TSS_Setting_Response sensorGetLastSettingResponse(TSS_Senso
 }
 static inline bool sensorIsStreaming(TSS_Sensor *sensor) {
     return sensor->streaming.data.active || sensor->streaming.file.active || sensor->streaming.log.active;
+}
+static inline void* sensorGetUserData(TSS_Sensor *sensor) {
+    return sensor->user_data;
 }
 
 //--------------------------------BASE FUNCTIONALITY-----------------------------------------
@@ -108,10 +125,12 @@ int sensorProcessDataStreamingCallbackOutput(TSS_Sensor *sensor, ...);
 /// @note No data left when return value < size
 int sensorProcessFileStreamingCallbackOutput(TSS_Sensor *sensor, void *output, uint16_t size);
 
+int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t size);
+
 //--------------------------------CUSTOM COMMAND DECLARATIONS--------------------------------------
-int sensorStartStreaming(TSS_Sensor *sensor, TssStreamingCallback cb);
-int sensorStreamFile(TSS_Sensor *sensor, TssStreamingCallback cb, uint64_t *out_size);
-int sensorStartLogging(TSS_Sensor *sensor, TssStreamingCallback cb);
+int sensorStartStreaming(TSS_Sensor *sensor, TssDataCallback cb);
+int sensorStreamFile(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size);
+int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb);
 
 //-------------------------------AUTO GENERATED COMMANDS--------------------------------------------
 int sensorGetTaredOrientation(TSS_Sensor *sensor, float out_quat[4]);

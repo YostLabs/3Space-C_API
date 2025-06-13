@@ -15,7 +15,7 @@ int sensorGetStreamingBatch(TSS_Sensor *sensor, ...) {
     return result;
 }
 
-int sensorStartStreaming(TSS_Sensor *sensor, TssStreamingCallback cb) {
+int sensorStartStreaming(TSS_Sensor *sensor, TssDataCallback cb) {
     int err;
     if(cb == NULL) return TSS_ERR_INVALID_STREAM_CALLBACK;
     err = sensorInternalExecuteCommand(sensor, tssGetCommand(85), NULL);
@@ -33,7 +33,7 @@ int sensorStopStreaming(TSS_Sensor *sensor) {
 
 //-------------------------------CUSTOM FILE-------------------------------
 
-int sensorStreamFile(TSS_Sensor *sensor, TssStreamingCallback cb, uint64_t *out_size) {
+int sensorStreamFile(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size) {
     int err;
     uint64_t file_len;
 
@@ -62,9 +62,9 @@ int sensorReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data) {
 
 //------------------------------CUSTOM LOGGING-----------------------------------
 
-int sensorStartLogging(TSS_Sensor *sensor, TssStreamingCallback cb) {
+int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb) {
     int err;
-    uint8_t immediate_output = 0;
+    uint8_t immediate_output, status;
     err = sensorReadLogImmediateOutput(sensor, &immediate_output);
     if(err < 0) return err;
 
@@ -84,6 +84,13 @@ int sensorStartLogging(TSS_Sensor *sensor, TssStreamingCallback cb) {
 #endif        
     }
     err = sensorInternalExecuteCommand(sensor, tssGetCommand(60), NULL);
+    if(err) return err;
+    //Because we are not forcing the status bit in the header to be enabled, we check here instead
+    //for success of the command.
+    err = sensorGetLoggingStatus(sensor, &status);
+    if(err) return err;
+    if(status != 1) return TSS_ERR_FAILED_START_LOGGING;
+
     if(!err && immediate_output) {
         sensor->streaming.log.active = true;
         sensor->streaming.log.cb = cb;

@@ -33,4 +33,6 @@ int sensorInternalUpdateDataStreaming(TSS_Sensor *sensor);
 int sensorInternalUpdateFileStreaming(TSS_Sensor *sensor);
 int sensorInternalUpdateLogStreaming(TSS_Sensor *sensor);
 
+int sensorInternalUpdateDebugMessage(TSS_Sensor *sensor);
+
 #endif /* __TSS_SENSOR_INTERNAL_H__ */

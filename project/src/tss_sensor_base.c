@@ -51,6 +51,32 @@ int sensorProcessFileStreamingCallbackOutput(TSS_Sensor *sensor, void *output, u
     return num_read;
 }
 
+int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t size)
+{
+    int num_read;
+    uint16_t read_len, remaining_len;
+
+    if(sensor->debug.message_processed) {
+        return 0;
+    }
+
+    remaining_len = TSS_DEBUG_MESSAGE_MAX_SIZE - sensor->debug.bytes_read;
+    read_len = (size < remaining_len) ? size : remaining_len;
+
+    num_read = sensor->com->in.read_until('\n', output, read_len, sensor->com->user_data);
+
+    if(num_read > 0) {
+        sensor->debug.bytes_read += num_read;
+        sensor->debug.message_processed = (output[num_read-1] == '\n');
+        remaining_len -= read_len;
+    }
+    
+    if(remaining_len == 0 && !sensor->debug.message_processed) {
+        return TSS_ERR_RESPONSE_NOT_FOUND;
+    }
+
+    return num_read;
+}
 
 #include <stdio.h>
 
@@ -115,8 +141,8 @@ int sensorInternalReadStreamingBatchChecksumOnly(TSS_Sensor *sensor) {
 
 int sensorInternalUpdateDataStreaming(TSS_Sensor *sensor) {
     sensorInternalHandleHeader(sensor);
-    enum TSS_StreamingCallbackState state = sensor->streaming.data.cb(sensor);
-    if(state == TSS_StreamingCallbackStateIgnored) {
+    enum TSS_DataCallbackState state = sensor->streaming.data.cb(sensor);
+    if(state == TSS_DataCallbackStateIgnored) {
         sensorInternalReadStreamingBatchChecksumOnly(sensor);
     }
     return state;
@@ -140,7 +166,7 @@ int sensorInternalUpdateFileStreaming(TSS_Sensor *sensor)
 #endif
     sensor->streaming.file.remaining_cur_packet_len = packet_len;
 
-    enum TSS_StreamingCallbackState state = sensor->streaming.file.cb(sensor);
+    enum TSS_DataCallbackState state = sensor->streaming.file.cb(sensor);
     if(sensor->streaming.file.remaining_cur_packet_len > 0) { //Read unread data out
         tssReadBytesChecksumOnly(sensor->com, sensor->streaming.file.remaining_cur_packet_len, NULL);
     }
@@ -157,8 +183,8 @@ int sensorInternalUpdateLogStreaming(TSS_Sensor *sensor) {
     if(sensor->streaming.log.header_enabled) {
         tssReadHeader(sensor->com, &sensor->header_cfg, &sensor->last_header);
     }
-    enum TSS_StreamingCallbackState state = sensor->streaming.log.cb(sensor);
-    if(state == TSS_StreamingCallbackStateIgnored) {
+    enum TSS_DataCallbackState state = sensor->streaming.log.cb(sensor);
+    if(state == TSS_DataCallbackStateIgnored) {
 #if TSS_MINIMAL_SENSOR
         sensor->com->in.clear_immediate(sensor->com);
 #else
@@ -166,6 +192,29 @@ int sensorInternalUpdateLogStreaming(TSS_Sensor *sensor) {
 #endif
     }
     return state;
+}
+
+static int consumeDebugMessage(TSS_Sensor *sensor)
+{
+    char buffer[40];
+    int result;
+    while(!sensor->debug.message_processed) {
+        result = sensorProcessDebugCallbackOutput(sensor, buffer, sizeof(buffer));
+        if(result < 0) {
+            return result;
+        }
+    }
+    return 0;
+}
+
+int sensorInternalUpdateDebugMessage(TSS_Sensor *sensor) {
+    sensor->debug.bytes_read = 0;
+    sensor->debug.message_processed = false;
+    enum TSS_DataCallbackState state = sensor->debug.cb(sensor);
+    if(!sensor->debug.message_processed) {
+        consumeDebugMessage(sensor);
+    }
+    return 0;
 }
 
 //------------------------WRAPPERS---------------------------------

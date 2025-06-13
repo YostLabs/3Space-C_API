@@ -19,7 +19,7 @@
 //Useful when using communication interfaces like SPI and I2C
 //TODO: Make me default and modify serial com class to just never buffer
 //Disabling this will just be a small speed improvement
-#define TSS_BUFFERED_WRITES 0
+#define TSS_BUFFERED_WRITES 1
 
 //Switches between building with minimal sensor functionality
 //and robust full capability functionality.

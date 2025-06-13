@@ -28,6 +28,9 @@
 #define TSS_FILE_STREAMING_MAX_PACKET_SIZE 512
 #define TSS_LOG_STREAMING_MAX_PACKET_SIZE 2048
 
+//Space for the header, the actual message, and the \r\n
+#define TSS_DEBUG_MESSAGE_MAX_SIZE (65 + 255 + 2)
+
 #define TSS_OUTPUT_MODE_ASCII 1
 #define TSS_OUTPUT_MODE_BINARY 2
 
