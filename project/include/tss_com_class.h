@@ -78,15 +78,61 @@ struct TSS_Time_Funcs {
     uint32_t (*diff)(tss_time_t start_time);
 };
 
+struct TSS_Com_Class;
+typedef int (*TssComAutoDetectCallback)(struct TSS_Com_Class *com, void *user_data);
+
+//The callback should return one of CONTINUE, STOP, or SUCCESS
+//The call to auto_detect will return STOP, SUCCESS, or DONE based on the return value
+//of the callback, with DONE being added for if there are no more devices and the callback
+//returned CONTINUE
+
+//Continue detecting devices. If no more, returns TSS_AUTO_DETECT_DONE
+#define TSS_AUTO_DETECT_CONTINUE 0
+//Stop detecting devices and return TSS_AUTO_DETECT_STOP
+#define TSS_AUTO_DETECT_STOP 1
+//Stop detecting devices and return TSS_AUTO_DETECT_SUCCESS
+#define TSS_AUTO_DETECT_SUCCESS 2
+//No more devices to detect
+#define TSS_AUTO_DETECT_DONE 3
+
+
+//NOTE: When creating a custom Com Class with this struct included, this must be the first element
+//of that struct. You should be able to freely cast between a (struct TSS_Com_Class*) and (struct MyCustomComClass*).
 struct TSS_Com_Class {
     struct TSS_Input_Stream in;
     struct TSS_Output_Stream out;
 
     struct TSS_Time_Funcs time;
 
+    //Open the device. If the device is already open
+    //leave the device open and return success
     int (*open)(void *user_data);
+
+    //Close the device. If the device is already closed
+    //return success.
     int (*close)(void *user_data);
 
+    //Set this to true if the communication object
+    //may need rediscovered when the sensor restarts.
+    //(It is common for a USB connection to reenumerate when 
+    //the sensor restarts/enters bootloader)
+    bool reenumerates;
+
+    //Only required to be implemented if reenumerates is set to true.
+    //Alternatively, leave reenumerate as false and manually handle connection
+    //state in your application when changes are made.
+    //NOTE: This user data is user data meant for the callback function provided, not
+    //the user data of a specific instance of a ComClass.
+    //If cb is NULL, the function should not call it and treat its return value as TSS_AUTO_DETECT_SUCCESS
+    int (*auto_detect)(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *user_data);
+
+
+    //Common info passed to most ComClass functions.
+    //Typically this will be a pointer to a parent of
+    //this struct to includes information required for
+    //that specific ComClass operation.
+    //When calling com class functions that take user
+    //data, make sure to pass this as well.
     void *user_data;
 };
 
