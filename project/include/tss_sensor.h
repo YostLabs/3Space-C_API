@@ -67,6 +67,9 @@ struct TSS_Sensor {
     bool _in_bootloader;
     bool dirty; //Unknown setting state. Cached values may be incorrect.
 
+    //Cached Data (Either useful for user or required for some functionality)
+    uint64_t serial_number;
+
     void *user_data;
 };
 
@@ -131,6 +134,33 @@ int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t si
 int sensorStartStreaming(TSS_Sensor *sensor, TssDataCallback cb);
 int sensorStreamFile(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size);
 int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb);
+
+
+/// @brief Disconnects and reconnects to the sensor. May
+/// require additional com class functionality (Reenumerate/Auto Detect)
+/// @param sensor The sensor to connect to
+/// @param timeout_ms How long to attempt to reconnect
+/// @return TSS_SUCCESS if successfully connected
+/// @warning On failure, the provided sensor object is in an undefined state
+int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms);
+
+//---------------------------------BOOTLOADER COMMANDS-------------------------------------------
+struct TSS_Bootloader_Info {
+    int32_t memstart;
+    int32_t memend;
+    int16_t pagesize;
+    int16_t version; 
+};
+
+int sensorBootloaderIsActive(TSS_Sensor *sensor, uint8_t *active);
+int sensorBootloaderGetSerialNumber(TSS_Sensor *sensor, uint64_t *serial_number);
+int sensorBootloaderLoadFirmware(TSS_Sensor *sensor, uint32_t timeout_ms);
+int sensorBootloaderEraseFirmware(TSS_Sensor *sensor, uint32_t timeout_ms);
+int sensorBootloaderGetInfo(TSS_Sensor *sensor, struct TSS_Bootloader_Info *info);
+int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint32_t num_bytes);
+int sensorBootloaderGetStatus(TSS_Sensor *sensor, uint32_t *status);
+int sensorBootloaderRestoreFactorySettings(TSS_Sensor *sensor);
+
 
 //-------------------------------AUTO GENERATED COMMANDS--------------------------------------------
 int sensorGetTaredOrientation(TSS_Sensor *sensor, float out_quat[4]);

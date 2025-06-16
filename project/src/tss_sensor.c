@@ -14,7 +14,7 @@
 
 #define THREESPACE_AWAIT_COMMAND_FOUND 0
 #define THREESPACE_AWAIT_COMMAND_TIMEOUT 1
-#define THREESPACE_AWAIT_BOOTLOADER 2
+#define THREESPACE_AWAIT_BOOTLOADER_FOUND 2
 
 #define THREESPACE_UPDATE_COMMAND_PARSED 0
 #define THREESPACE_UPDATE_COMMAND_MISALIGNED 1
@@ -52,15 +52,21 @@ static int awaitSetSettingResponse(TSS_Sensor *sensor, uint16_t num_keys);
 #define getTimeout(sensor) (sensor)->com->in.get_timeout((sensor)->com->user_data)
 
 void initTssSensor(TSS_Sensor *sensor) {
+    uint8_t in_bootloader;
     sensorInternalForceStopStreaming(sensor);
 
     //Clear out any garbage data
     sensor->com->in.clear_timeout(sensor->com->user_data, 5);
 
     //Check for bootloader
-    sensor->_in_bootloader = false; //TODO
+    sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
+    sensor->_in_bootloader = in_bootloader;
     if(!sensor->_in_bootloader) {
         initFirmware(sensor);
+    }
+    else {
+        //Cache so if reenumerates can find when booting into firmware
+        sensorBootloaderGetSerialNumber(sensor, &sensor->serial_number);
     }
 }
 
@@ -120,21 +126,27 @@ void sensorUpdateCachedSettings(TSS_Sensor *sensor) {
     sensor->debug._immediate = value;
 
     cacheStreamSlots(sensor);
+
+    sensorReadSerialNumber(sensor, &sensor->serial_number);
 }
 
 static void checkDirty(TSS_Sensor *sensor) {
+    uint8_t in_bootloader;
     if(!sensor->dirty) return;
 
+    //Ensure connected
+    if(sensor->com->open(sensor->com->user_data)) {
+        //TODO: Handle Error
+        sensorReconnect(sensor, 2000); //Will cause reenumeration if enabled
+    }
     sensorInternalForceStopStreaming(sensor);
-
-    //TODO: Add bootloader logic
-    initFirmware(sensor);
+    sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
+    sensor->_in_bootloader = in_bootloader;
     
-    //This is set in a lot of places just to ensure
-    //no matter what function gets called, the dirty
-    //state is properly updated. In general, this doesn't
-    //actually need to be here due to initFirmware clearing
-    //the dirty flag itself, but this adds to readability
+    if(!in_bootloader) {
+        initFirmware(sensor);
+    }
+    
     sensor->dirty = false;
 }
 
@@ -183,10 +195,11 @@ inline static int baseReadSettings(TSS_Sensor *sensor, const char *key_string)
     tssGetSettingsWrite(sensor->com, true, key_string);
 
     //+1 is because the terminating character/delimiter is also required in the response.
-    min_response_len = str_len_until(key_string, ';') + 1 + TSS_BINARY_SETTINGS_ID_SIZE;
-    if(min_response_len > TSS_SETTING_KEY_ERR_STRING_LEN + 1 + TSS_BINARY_SETTINGS_ID_SIZE) {
-        min_response_len = TSS_SETTING_KEY_ERR_STRING_LEN + 1 + TSS_BINARY_SETTINGS_ID_SIZE;
+    min_response_len = str_len_until(key_string, ';');
+    if(min_response_len > TSS_SETTING_KEY_ERR_STRING_LEN) {
+        min_response_len = TSS_SETTING_KEY_ERR_STRING_LEN;
     }
+    min_response_len += (1 + TSS_BINARY_SETTINGS_ID_SIZE); //Add null terminator and header size
     if(awaitGetSettingResponse(sensor, min_response_len, false) != THREESPACE_AWAIT_COMMAND_FOUND) {
         return TSS_ERR_RESPONSE_NOT_FOUND;
     }  
@@ -410,8 +423,8 @@ static int awaitGetSettingResponse(TSS_Sensor *sensor, uint16_t min_len, bool ch
 
     char boot_check[3] = {0};
 
-    //Size of the header
-    if(min_len < TSS_BINARY_SETTINGS_ID_SIZE) {
+    //Size of the header, bootloader check may not have header
+    if(min_len < TSS_BINARY_SETTINGS_ID_SIZE && !check_bootloader) {
         min_len = TSS_BINARY_SETTINGS_ID_SIZE;
     }
 
@@ -424,7 +437,12 @@ static int awaitGetSettingResponse(TSS_Sensor *sensor, uint16_t min_len, bool ch
         if(check_bootloader) {
             sensor->com->in.peek(0, 2, boot_check, sensor->com->user_data);
             if(strcmp(boot_check, "OK") == 0) {
-                return THREESPACE_AWAIT_BOOTLOADER;
+                return THREESPACE_AWAIT_BOOTLOADER_FOUND;
+            }
+
+            //Don't go on to check if a setting response yet cause not enough length for that
+            if(comLength(sensor) < TSS_BINARY_SETTINGS_ID_SIZE) {
+                continue;
             }
         }
 
@@ -603,5 +621,56 @@ static int peekCheckDebugMessage(TSS_Sensor *sensor) {
     return TSS_SUCCESS;
 }
 
+
+//--------------------------------------BOOTLOADER----------------------------------------------
+int sensorBootloaderIsActive(TSS_Sensor *sensor, uint8_t *active)
+{
+    checkDirty(sensor);
+    *active = sensor->_in_bootloader;
+    return TSS_SUCCESS;
+}
+
+int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
+{
+    //On firmware response, receives "<KEY_ERROR>\0\0\x", so len + 3
+    char response[TSS_SETTING_KEY_ERR_STRING_LEN + 3];
+    uint32_t id;
+    int result;
+
+    //This first part primes the potential Automatic Uart Baudrate detection the bootloader does
+    TSS_COM_BEGIN_WRITE(sensor->com);
+    sensor->com->out.write((uint8_t*)"UUU", 3, sensor->com->user_data);
+    TSS_COM_END_WRITE(sensor->com);
+    //Sending the ?'s as a setting causes an instant error response in firmware mode, which prevents
+    //having to wait for the bootloader response to timeout to know if in bootloader or firmware
+    tssGetSettingsWrite(sensor->com, true, "?");
+
+    //Await a setting response with the bootloader check toggled to true
+    result = awaitGetSettingResponse(sensor, 2, true);
+    if(result == THREESPACE_AWAIT_BOOTLOADER_FOUND) {
+        *active = 1;
+        result = TSS_SUCCESS;
+
+        //Clear the up to 6 "OK" responses in the com class
+        //Just clear everything, no risk of streaming or anything
+        //like that going on because in the bootloader
+        sensor->com->in.clear_immediate(sensor->com->user_data);
+        //sensor->com->in.clear_timeout(sensor->com->user_data, 5000);
+    }
+    else if(result == THREESPACE_AWAIT_COMMAND_FOUND) {
+        *active = 0;
+        result = TSS_SUCCESS;
+
+        //Clear the <KEY_ERROR> response, only what is necessary
+        //in case doing something like streaming. Don't want to clear too much.
+        tssReadSettingsHeader(sensor->com, &id);
+        sensor->com->in.read(TSS_SETTING_KEY_ERR_STRING_LEN + 3, (uint8_t*)response, sensor->com->user_data);
+    }
+    else {
+        result = TSS_ERR_READ;
+    }
+
+    return result;
+}
 
 #endif /* !TSS_MINIMAL_SENSOR */

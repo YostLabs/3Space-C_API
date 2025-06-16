@@ -103,15 +103,51 @@ int sensorStopLogging(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(61), NULL);
 }
 
-//-------------------------------------TODO-----------------------------------------------
 int sensorSoftwareReset(TSS_Sensor *sensor) {
-    //Must not try and do any read after sending (no header).
-    return sensorInternalExecuteCommand(sensor, tssGetCommand(226), NULL);
+    bool header_was_enabled;
+
+    header_was_enabled = sensor->_header_enabled;
+    sensor->_header_enabled = false;
+    sensorInternalExecuteCommand(sensor, tssGetCommand(226), NULL);
+    sensor->_header_enabled = header_was_enabled;
+
+    //TODO: Should this be provided as a parameter? Or should the reconnect just be expected to be called separate?
+    ///Im fine with either. Main issue with NOT having the reconnect in the function is if someone calls reset and doesn't know
+    //to call reconnect.
+    return sensorReconnect(sensor, 2000);
 }
 
 int sensorEnterBootloader(TSS_Sensor *sensor) {
-    return sensorInternalExecuteCommand(sensor, tssGetCommand(229), NULL);
+    uint8_t active, header_was_enabled;
+    int result;
+    if(sensor->_in_bootloader) return TSS_SUCCESS;
+
+    header_was_enabled = sensor->_header_enabled;
+    sensor->_header_enabled = false;
+    sensorInternalExecuteCommand(sensor, tssGetCommand(229), NULL);
+    sensor->_header_enabled = header_was_enabled;
+
+    //TODO: Same question as above
+    if(sensor->com->reenumerates) {
+        if(sensorReconnect(sensor, 2000) != TSS_SUCCESS) {
+            return TSS_ERR_DETECTION;
+        }
+    }
+
+    //Ensure entered bootloader
+    result = sensorInternalBootloaderCheckActive(sensor, &active);
+    if(result != TSS_SUCCESS) return result;
+    sensor->_in_bootloader = active;
+    if(!active) {
+        return TSS_ERR_NOT_IN_BOOTLOADER;
+    }
+
+    sensor->com->in.clear_immediate(sensor->com->user_data);
+
+    return TSS_SUCCESS;
 }
+
+//-------------------------------------TODO-----------------------------------------------
 
 //-----------------------------------AUTO GENERATED--------------------------------------------
 

@@ -13,6 +13,7 @@ int sensorInternalExecuteCommandCustom(TSS_Sensor *sensor, const struct TSS_Comm
 //These needs implemented per sensor type
 int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
 int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunction read_func, va_list outputs);
+int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active);
 
 //-----------------------Control-------------------------
 void sensorInternalForceStopStreaming(TSS_Sensor *sensor);
@@ -34,5 +35,6 @@ int sensorInternalUpdateFileStreaming(TSS_Sensor *sensor);
 int sensorInternalUpdateLogStreaming(TSS_Sensor *sensor);
 
 int sensorInternalUpdateDebugMessage(TSS_Sensor *sensor);
+
 
 #endif /* __TSS_SENSOR_INTERNAL_H__ */

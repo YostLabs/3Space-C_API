@@ -19,13 +19,15 @@ void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 static void initFirmware(TSS_Sensor *sensor);
 
 void initTssSensor(TSS_Sensor *sensor) {
+    uint8_t in_bootloader;
     sensorInternalForceStopStreaming(sensor);
 
     //Clear out any garbage data
     sensor->com->in.clear_timeout(sensor->com->user_data, 5);
 
     //Check for bootloader
-    sensor->_in_bootloader = false; //TODO
+    sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
+    sensor->_in_bootloader = in_bootloader;
     if(!sensor->_in_bootloader) {
         initFirmware(sensor);
     }
@@ -122,6 +124,49 @@ int sensorUpdateStreaming(TSS_Sensor *sensor)
     if(sensor->streaming.log.active) {
         sensorInternalUpdateLogStreaming(sensor);
     }
+}
+
+//--------------------------------------BOOTLOADER----------------------------------------------
+int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
+{
+    char response[2];
+    int result;
+
+    //This first part primes the potential Automatic Uart Baudrate detection the bootloader does
+    TSS_COM_BEGIN_WRITE(sensor->com);
+    sensor->com->out.write((uint8_t*)"UUU", 3, sensor->com->user_data);
+    TSS_COM_END_WRITE(sensor->com);
+    //Sending the ?'s as a setting causes an instant error response in firmware mode, which prevents
+    //having to wait for the bootloader response to timeout to know if in bootloader or firmware
+    tssGetSettingsWrite(sensor->com, true, "?");
+
+    result = sensor->com->in.read(2, (uint8_t*)response, sensor->com->user_data);
+    if(result != 2) {
+        result = TSS_ERR_READ;
+    }
+    //In bootloader response
+    else if(response[0] == 'O' && response[1] == 'K') {
+        *active = 1;
+        result = TSS_SUCCESS;
+    }
+    //Start of the "<KEY_ERROR>" response because in firmware
+    else if(response[0] == '<' && response[1] == 'K') {
+        *active = 0;
+        result = TSS_SUCCESS;
+    }
+    else {
+        result = TSS_ERR_UNEXPECTED_CHARACTER;
+    }
+
+    //Clear out the rest of the OK responses or rest of the Setting response
+    sensor->com->in.clear_immediate(sensor->com->user_data);
+
+    return result;
+}
+
+int sensorBootloaderIsActive(TSS_Sensor *sensor, uint8_t *active)
+{
+    return sensorInternalBootloaderCheckActive(sensor, active);
 }
 
 #endif /* TSS_MINIMAL_SENSOR */
