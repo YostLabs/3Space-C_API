@@ -142,6 +142,14 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
     return TSS_ERR_DETECTION;
 }
 
+int sensorCleanup(TSS_Sensor *sensor)
+{
+    sensorInternalForceStopStreaming(sensor);
+    //TODO: Has to work on all models before added here
+    //sensorCloseFile(sensor);
+    return sensor->com->close(sensor->com->user_data);
+}
+
 //----------------------------BOOTLOADER-----------------------------------------
 
 //NOTE: Bootloader works in Big Endian instead of Little Endian, so the swaps are backwards
@@ -235,9 +243,43 @@ int sensorBootloaderGetInfo(TSS_Sensor *sensor, struct TSS_Bootloader_Info *info
     return TSS_SUCCESS;
 }
 
-int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint32_t num_bytes)
+int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint16_t num_bytes, uint32_t timeout_ms)
 {
+    uint32_t i, cached_timeout;
+    uint16_t checksum, num_bytes_converted;
+    int num_read_or_err;
+    uint8_t result;
+
     VALIDATE_BOOTLOADER
+    
+    //Compute Checksum
+    checksum = 0;
+    for(i = 0; i < num_bytes; i++) {
+        checksum += bytes[i];
+    }
+
+    num_bytes_converted = num_bytes;
+    TSS_ENDIAN_SWAP_DEVICE_TO_BIG(&num_bytes_converted, sizeof(num_bytes_converted));
+    TSS_ENDIAN_SWAP_DEVICE_TO_BIG(&checksum, sizeof(checksum));
+
+    TSS_COM_BEGIN_WRITE(sensor->com);
+    sensor->com->out.write((uint8_t*)"C", 1, sensor->com->user_data);
+    sensor->com->out.write((uint8_t*)&num_bytes_converted, sizeof(num_bytes_converted), sensor->com->user_data);
+    sensor->com->out.write(bytes, num_bytes, sensor->com->user_data);
+    sensor->com->out.write((uint8_t*)&checksum, sizeof(checksum), sensor->com->user_data);
+    TSS_COM_END_WRITE(sensor->com);
+
+    //Wait for response
+    cached_timeout = sensor->com->in.get_timeout(sensor->com->user_data);
+    sensor->com->in.set_timeout(timeout_ms, sensor->com->user_data);
+    num_read_or_err = sensor->com->in.read(1, &result, sensor->com->user_data);
+    sensor->com->in.set_timeout(cached_timeout, sensor->com->user_data);
+
+    if(num_read_or_err != 1) {
+        return TSS_ERR_READ;
+    }
+
+    return result;
 }
 
 int sensorBootloaderGetStatus(TSS_Sensor *sensor, uint32_t *status)

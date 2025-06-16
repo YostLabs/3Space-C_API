@@ -135,7 +135,6 @@ int sensorStartStreaming(TSS_Sensor *sensor, TssDataCallback cb);
 int sensorStreamFile(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size);
 int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb);
 
-
 /// @brief Disconnects and reconnects to the sensor. May
 /// require additional com class functionality (Reenumerate/Auto Detect)
 /// @param sensor The sensor to connect to
@@ -143,6 +142,7 @@ int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb);
 /// @return TSS_SUCCESS if successfully connected
 /// @warning On failure, the provided sensor object is in an undefined state
 int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms);
+int sensorCleanup(TSS_Sensor *sensor);
 
 //---------------------------------BOOTLOADER COMMANDS-------------------------------------------
 struct TSS_Bootloader_Info {
@@ -157,7 +157,7 @@ int sensorBootloaderGetSerialNumber(TSS_Sensor *sensor, uint64_t *serial_number)
 int sensorBootloaderLoadFirmware(TSS_Sensor *sensor, uint32_t timeout_ms);
 int sensorBootloaderEraseFirmware(TSS_Sensor *sensor, uint32_t timeout_ms);
 int sensorBootloaderGetInfo(TSS_Sensor *sensor, struct TSS_Bootloader_Info *info);
-int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint32_t num_bytes);
+int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint16_t num_bytes, uint32_t timeout_ms);
 int sensorBootloaderGetStatus(TSS_Sensor *sensor, uint32_t *status);
 int sensorBootloaderRestoreFactorySettings(TSS_Sensor *sensor);
 
