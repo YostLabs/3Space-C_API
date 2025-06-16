@@ -56,30 +56,6 @@
 
 //Set this to manually change endian build target
 #define TSS_ENDIAN_OVERRIDE TSS_ENDIAN_AUTO_DETECT
-//TODO: This is going to be a problem in a DLL...
-
-//Set endianness based on override or auto detect
-#if TSS_ENDIAN_OVERRIDE 
-    #define TSS_ENDIAN_CONFIG TSS_ENDIAN_OVERRIDE
-#else
-    #ifdef __BYTE_ORDER__
-        #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-            #define TSS_ENDIAN_CONFIG TSS_ENDIAN_BIG
-        #elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            #define TSS_ENDIAN_CONFIG TSS_ENDIAN_LITTLE
-        #else
-            #error "Unknown Endianness"
-        #endif
-    #else
-        #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-            #define TSS_ENDIAN_CONFIG TSS_ENDIAN_BIG
-        #elif defined(__BIG_ENDIAN__) || defined(__BIG_ENDIAN) || defined(_BIG_ENDIAN)
-            #define TSS_ENDIAN_CONFIG TSS_ENDIAN_BIG
-        #else
-            #error "Undefined Endianness"
-        #endif
-    #endif
-#endif
 
 
 #endif /* __TSS_CONFIG_H__ */

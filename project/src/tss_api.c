@@ -5,27 +5,16 @@
 #include "tss_constants.h"
 #include "tss_errors.h"
 #include "tss_config.h"
+#include "tss_endian.h"
 
 #include "tss_string.h"
 #include <stdarg.h>
 
-//----------------------------------HELPERS---------------------------------------
-#if TSS_BUFFERED_WRITES
-#define BEGIN_WRITE(com) ((com)->out.begin_write((com->user_data)))
-#define END_WRITE(com) ((com)->out.end_write((com->user_data)))
-#else
-#define BEGIN_WRITE(com)
-#define END_WRITE(com)
-#endif
-
 //---------------------------------PROTOTYPES-------------------------------------
 inline static void send_params(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, const void ***raw_data, uint8_t *checksum);
 inline static void send_param(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, const uint8_t *raw_data, uint8_t *checksum);
-#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
-inline static void swap_endianess(uint8_t *data, uint16_t p_size);
 inline static void swap_singular_param_endianess(uint8_t *data, const struct TSS_Param *param);
 inline static void swap_param_endianess(uint8_t *data, const struct TSS_Param *param);
-#endif
 
 //------------------------------API FUNCTIONS---------------------------------
 
@@ -39,7 +28,7 @@ int tssWriteCommand(const struct TSS_Com_Class *com, bool header, const struct T
     checksum = command->num;
     start_byte = (header) ? TSS_BINARY_HEADER_START_BYTE : TSS_BINARY_START_BYTE;
 
-    BEGIN_WRITE(com);
+    TSS_COM_BEGIN_WRITE(com);
     com->out.write(&start_byte, 1, com->user_data);
     com->out.write(&command->num, 1, com->user_data);
 
@@ -48,7 +37,7 @@ int tssWriteCommand(const struct TSS_Com_Class *com, bool header, const struct T
     }
 
     com->out.write(&checksum, 1, com->user_data);
-    END_WRITE(com);
+    TSS_COM_END_WRITE(com);
     return 0;
 }
 
@@ -283,11 +272,11 @@ int tssGetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char
         checksum += key_string[i];
     }
 
-    BEGIN_WRITE(com);
+    TSS_COM_BEGIN_WRITE(com);
     com->out.write(&start_byte, 1, com->user_data);
     com->out.write((uint8_t*)key_string, key_len+1, com->user_data); //+1 to send the  null terminator
     com->out.write(&checksum, 1, com->user_data);
-    END_WRITE(com);
+    TSS_COM_END_WRITE(com);
 
     return 0;
 }
@@ -430,7 +419,7 @@ int tssSetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char
     uint8_t key_index, checksum;
     const char *key;
 
-    BEGIN_WRITE(com);
+    TSS_COM_BEGIN_WRITE(com);
     com->out.write(&start_byte, 1, com->user_data);
 
     checksum = 0;
@@ -458,7 +447,7 @@ int tssSetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char
     //Done writing, now add the null terminator and checksum
     com->out.write((uint8_t*)"\0", 1, com->user_data);
     com->out.write(&checksum, 1, com->user_data);
-    END_WRITE(com);
+    TSS_COM_END_WRITE(com);
 
     return TSS_SUCCESS;
 }
@@ -522,9 +511,7 @@ inline static void send_params(const struct TSS_Com_Class *com, const struct TSS
 
 inline static void send_param(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, const uint8_t *raw_data, uint8_t *checksum)
 {
-#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
     uint8_t element, conversion[8]; //Max U64 is 8 bytes
-#endif
     uint8_t i;
     uint16_t param_len;
     bool is_str;
@@ -536,44 +523,34 @@ inline static void send_param(const struct TSS_Com_Class *com, const struct TSS_
         *checksum += raw_data[i];
     }
 
-#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_LITTLE
-    com->out.write(raw_data, param_len, com->user_data);
-#else
-    //Have to send each part of the param 1 at a time because need
-    //to swap endianess, but the incoming data is const, so not allowed to modify it there
-    for(element = 0; element < cur_param->count; element++) {
-        if(is_str) { //Strings don't need endianess swapped
-            com->out.write(raw_data, param_len, com->user_data);
-        }
-        else {
-            //Swap endianess
-            for(i = 0; i < cur_param->size; i++) {
-                conversion[i] = raw_data[cur_param->size-1-i];
+    if(TSS_ENDIAN_IS_LITTLE) {
+        com->out.write(raw_data, param_len, com->user_data);
+    }
+    else {
+        //Have to send each part of the param 1 at a time because need
+        //to swap endianess, but the incoming data is const, so not allowed to modify it there
+        for(element = 0; element < cur_param->count; element++) {
+            if(is_str) { //Strings don't need endianess swapped
+                com->out.write(raw_data, param_len, com->user_data);
+            }
+            else {
+                //Swap endianess
+                for(i = 0; i < cur_param->size; i++) {
+                    conversion[i] = raw_data[cur_param->size-1-i];
+                }
+
+                com->out.write(conversion, cur_param->size, com->user_data);
             }
 
-            com->out.write(conversion, cur_param->size, com->user_data);
+            //Advance to the next element
+            raw_data += cur_param->size;
         }
-
-        //Advance to the next element
-        raw_data += cur_param->size;
-    }
-#endif
-}
-
-#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
-inline static void swap_endianess(uint8_t *data, uint16_t p_size) 
-{
-    uint8_t i, tmp;
-    for(i = 0; i < p_size / 2; i++) {
-        tmp = data[i];
-        data[i] = data[p_size-1-i];
-        data[p_size-1-i] = tmp;
     }
 }
 
 //Swaps a singular element. So if an array of floats, just swaps 1 float
 inline static void swap_singular_param_endianess(uint8_t *data, const struct TSS_Param *param) {
-    swap_endianess(data, param->size);
+    tssSwapEndianess(data, param->size);
 }
 
 //Swaps all elements. So if an array of floats, swaps all the floats.
@@ -585,8 +562,6 @@ inline static void swap_param_endianess(uint8_t *data, const struct TSS_Param *p
         data += param->size;
     }
 }
-
-#endif
 
 int tssReadParams(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum, ...)
 {

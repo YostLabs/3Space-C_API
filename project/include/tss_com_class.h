@@ -55,7 +55,6 @@ struct TSS_Input_Stream {
 };
 
 
-
 //Modify me to have a write and write_send. Allow the OutputStream to buffer the write
 //until it needs to be sent if desired. (Will help for things like I2C and SPI)
 //Probably just have a write_begin, write, and write_end.
@@ -68,6 +67,15 @@ struct TSS_Output_Stream {
     int (*end_write)(void *user_data);
 #endif
 };
+
+//Helpers for conditionally compiling in the begin/end writes
+#if TSS_BUFFERED_WRITES
+#define TSS_COM_BEGIN_WRITE(com) ((com)->out.begin_write((com->user_data)))
+#define TSS_COM_END_WRITE(com) ((com)->out.end_write((com->user_data)))
+#else
+#define TSS_COM_BEGIN_WRITE(com)
+#define TSS_COM_END_WRITE(com)
+#endif
 
 //NOTE:
 //The tss_time_t can be any type and in any unit the user wants.
