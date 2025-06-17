@@ -97,23 +97,16 @@ inline static int hexCharToValue(uint8_t c) {
     return -1;
 }
 
-//Requires the incoming character to be a valid Hex Character already.
-//Output is undefined if invalid input.
-static inline uint8_t hexCharToValue(uint8_t c) {
-    //C & 0xF gets 0-9 for "0-9" and 1-6 for [Aa-Ff]
-    //Need to add 9 if it was a letter. 
-    //C >> 6 is 1 if a hex letter, 0 if a number
-    //Note: that c >> 6 != 1 for all letters, if that
-    //was required, should add an & 1 to the result as
-    //that is true for all letters
-    return (c & 0xF) + (c >> 6) * 9;
-}
-
-inline static void hexStringToBytes(uint8_t *buffer, uint16_t buffer_size) {
+inline static int hexStringToBytes(uint8_t *buffer, uint16_t buffer_size) {
+    int high, low;
     uint32_t i, j = 0;
     for(i = 0, j = 0; j < buffer_size; i++, j+= 2) {
-        buffer[i] = (hexCharToValue(buffer[j]) << 4) | hexCharToValue(buffer[j+1]);
+        high = hexCharToValue(buffer[j]);
+        low = hexCharToValue(buffer[j+1]);
+        if(high < 0 || low < 0) return TSS_ERR_UNEXPECTED_CHARACTER;
+        buffer[i] = (high << 4) | (low);
     }
+    return TSS_SUCCESS;
 }
 
 inline static int parseData(struct TSS_Firmware_Uploader *uploader, char c) {
@@ -123,7 +116,8 @@ inline static int parseData(struct TSS_Firmware_Uploader *uploader, char c) {
     }
     if(uploader->index == uploader->buffer_size || c == '<') {
         if(uploader->index & 1) return TSS_ERR_FIRMWARE_UPLOAD_INVALID_FORMAT; //Must be a multiple of 2
-        hexStringToBytes(uploader->buffer, uploader->index);
+        err = hexStringToBytes(uploader->buffer, uploader->index);
+        if(err) return err;
         err = sensorBootloaderProgram(uploader->sensor, uploader->buffer, uploader->index / 2, uploader->timeout_program_ms);   
         if(err) {
             return TSS_FIRMWARE_UPLOAD_COMPLETE;
