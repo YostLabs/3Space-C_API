@@ -83,10 +83,11 @@ inline static int parseTag(struct TSS_Firmware_Uploader *uploader, char c) {
     switch(c) {
         case '/': //End of TAG (Or an end tag which is ignored)
         case '>':
-            if(buffer_add(uploader, '\0')) return TSS_ERR_FIRMWARE_UPLOAD_INVALID_FORMAT; //Null terminate the tag and check
+            if(buffer_add(uploader, '\0')) return TSS_ERR_BUFFER_OVERFLOW; //Null terminate the tag and check
             return processTag(uploader);
         default:
-            return buffer_add(uploader, c);
+            if(buffer_add(uploader, c)) return TSS_ERR_BUFFER_OVERFLOW;
+            return TSS_SUCCESS;
     }
 }
 
