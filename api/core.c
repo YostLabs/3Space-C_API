@@ -497,7 +497,6 @@ int tssPeekSettingsHeader(const struct TSS_Com_Class *com, uint32_t *id) {
 }
 
 //-----------------------HELPER FUNCTIONS------------------------------
-//Mostly to help handle endianness
 
 inline static void send_params(const struct TSS_Com_Class *com, const struct TSS_Param *cur_param, const void ***raw_data, uint8_t *checksum)
 {
@@ -580,7 +579,6 @@ int tssReadParamsVp(const struct TSS_Com_Class *com, const struct TSS_Param *cur
     while(!TSS_PARAM_IS_NULL(cur_param)) {
         uint8_t *out = (uint8_t*) va_arg(*args, void*);
 
-        //TODO: Error if num read != expected length
         if(TSS_PARAM_IS_STRING(cur_param)) {
             //When using string width specifier, the value MUST be 32 bits. EX: 4ul;
             str_len = va_arg(*args, uint32_t);

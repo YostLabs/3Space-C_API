@@ -149,7 +149,7 @@ static int read_until(uint8_t value, uint8_t *out, size_t size, void *user_data)
     tss_time_t start_time = tssTimeGet();
 
     num_read = 0;
-    //TODO: Make sure this wraps properly
+
     while(num_read < size && tssTimeDiff(start_time) < com->port.timeout) {
         if(serReadImmediate(&com->port, out, 1)) { //Read one at a time to avoid overreading for now
             num_read++;

@@ -47,7 +47,7 @@ static int awaitCommandResponse(TSS_Sensor *sensor, uint8_t cmd_num, uint16_t mi
 static int awaitGetSettingResponse(TSS_Sensor *sensor, uint16_t min_len, bool check_bootloader);
 static int awaitSetSettingResponse(TSS_Sensor *sensor, uint16_t num_keys);
 
-//Helper Macros, just makes things more clear
+//Helper Macros
 #define comLength(sensor) (sensor)->com->in.length((sensor)->com->user_data)
 #define peekCapacity(sensor) (sensor)->com->in.peek_capacity((sensor)->com->user_data)
 #define getTimeout(sensor) (sensor)->com->in.get_timeout((sensor)->com->user_data)
@@ -160,8 +160,8 @@ int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Com
     checkDirty(sensor);
     tssWriteCommand(sensor->com, sensor->_header_enabled, command, input);
     err_or_checksum = read_func(sensor, command, outputs);
-    if(err_or_checksum < 0) return err_or_checksum; //Return the error
-    return TSS_SUCCESS; //No error
+    if(err_or_checksum < 0) return err_or_checksum;
+    return TSS_SUCCESS;
 }
 
 int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs)
