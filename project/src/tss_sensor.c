@@ -24,7 +24,8 @@
 void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 {
     *sensor = (TSS_Sensor) {
-        .com = com
+        .com = com,
+        ._header_enabled = true
     };
 }
 
@@ -73,6 +74,7 @@ void initTssSensor(TSS_Sensor *sensor) {
 
 static void initFirmware(TSS_Sensor *sensor) {
     sensor->dirty = false;
+    sensor->_header_enabled = true;
     sensorUpdateCachedSettings(sensor);
 }
 
