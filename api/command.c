@@ -1,32 +1,6 @@
 #include "tss/api/command.h"
 #include "tss/sys/string.h"
 
-//Todo:
-//Create a nice structure for defining commands, then create an auto generator for the C table.
-//Reason being, I want as much data parsed out as possible already for efficency, but I also
-//Don't want this being unreadable...
-
-//But at that point, should I just generate all the functions???
-//I do think its still nice to have the info about the commands though that the user can access.
-//as well as a way to parse arbitrary data by passing a command object. At which point its a bit redundant...
-
-//I want to be able to minimize size on microcontrollers though...
-//Maybe make a #define to not include things like format string?
-
-//Yeah still do the generic access method, don't generate a function with parsing in it for each cause the speed up
-//would be very minimal, and would also just increase flash size. Speed isn't the main concern IMO since the idea is for
-//this to be MICRO.
-
-//Change me to be an array of pointers
-// const static struct TSS_Command m_commands[256] = {
-//     [0] = { .num = 0, .format = (const struct TSS_Param[]){ { .count = 4, .size = sizeof(float) } } }
-// };
-
-// const static struct TSS_Command* m_commands[256] = {
-//     [0] = (const struct TSS_Command[]) { {.num = 0, .format = (const struct TSS_Param[]){ { .count = 1, .size = 4 }, {.count = 2, .size=5} } } }
-// };
-
-
 #define NULL_PARAM TSS_PARAM_NULL
 #define DYNAMIC_TYPE NULL_PARAM
 #define PARAM(_count, _size) TSS_PARAM(_count, _size)
@@ -292,7 +266,6 @@ void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uin
 //settings. However, things like Query Settings won't be in the table of course since those are purely dynamic
 #define AGGREGATE_SETTING(_name) SETTING_START((_name)) .out_format = (const struct TSS_Param[]){ NULL_PARAM }, SETTING_END
 
-//const static struct TSS_Setting const * const m_settings[] = {
 static const struct TSS_Setting m_settings[] = {
     //System
     CMD_SETTING("default")

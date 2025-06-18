@@ -73,8 +73,8 @@ int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Com
     int err_or_checksum;
     tssWriteCommand(sensor->com, sensor->_header_enabled, command, input);
     err_or_checksum = read_func(sensor, command, outputs);
-    if(err_or_checksum < 0) return err_or_checksum; //Return the error
-    return TSS_SUCCESS; //No error
+    if(err_or_checksum < 0) return err_or_checksum;
+    return TSS_SUCCESS;
 }
 
 //--------------------------------GENERIC FUNCTIONS-------------------------------------
