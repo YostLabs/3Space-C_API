@@ -1,4 +1,4 @@
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 #if TSS_STDC_AVAILABLE == 0
 
 size_t strlen(const char *string)

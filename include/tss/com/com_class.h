@@ -60,7 +60,7 @@ struct TSS_Input_Stream {
 //Probably just have a write_begin, write, and write_end.
 //Have compiler flags to not include.
 struct TSS_Output_Stream {
-    int (*write)(const uint8_t *bytes, uint32_t len, void *user_data);
+    int (*write)(const uint8_t *bytes, size_t len, void *user_data);
 
 #if TSS_BUFFERED_WRITES
     int (*begin_write)(void *user_data);

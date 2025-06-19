@@ -50,11 +50,11 @@
 
 //Types
 #define TSS_ENDIAN_AUTO_DETECT 0
-#define TSS_ENDIAN_RUN_TIME 1 //TODO: Implement me
+#define TSS_ENDIAN_RUN_TIME 1
 #define TSS_ENDIAN_LITTLE 2
 #define TSS_ENDIAN_BIG 3
 
 //Set this to manually change endian build target
-#define TSS_ENDIAN_OVERRIDE TSS_ENDIAN_AUTO_DETECT
+#define TSS_ENDIAN_OVERRIDE TSS_ENDIAN_RUN_TIME
 
 #endif /* __TSS_CONFIG_H__ */

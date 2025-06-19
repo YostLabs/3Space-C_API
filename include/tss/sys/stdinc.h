@@ -4,9 +4,9 @@
 #include "tss/sys/config.h"
 #include <stddef.h>
 
-//Mean't as a way of building if <string.h> is not available for the using device
+//Meant as a way of building if the standard library is not available for the using device.
 //Note that these functions are not optimized and will provide worse performance
-//if TSS_STDC_AVAILABLE is not 1
+//then the standard library. To use the standard library, set TSS_STDC_AVAILABLE=1 in tss/sys/config.h
 
 #if TSS_STDC_AVAILABLE
 #include <string.h>

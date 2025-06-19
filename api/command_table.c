@@ -1,9 +1,9 @@
 #include "tss/api/command.h"
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 
-#define NULL_PARAM TSS_PARAM_NULL
+#define PARAM(_count, _size) TSS_PARAM_INITIALIZER(_count, _size)
+#define NULL_PARAM TSS_PARAM_NULL_INITIALIZER
 #define DYNAMIC_TYPE NULL_PARAM
-#define PARAM(_count, _size) TSS_PARAM(_count, _size)
 #define FLOAT(_count) PARAM(_count, 4)
 #define DOUBLE(_count) PARAM(_count, 8)
 #define U8(_count)  PARAM(_count, 1)
@@ -41,8 +41,20 @@
 //No RW cmd because the input types are frequently different from the output, unlike settings
 //It is just considered a base cmd.
 
-const static struct TSS_Command const * const m_commands[256] = {
-    READ_CMD(0, "GetTaredOrientation", FLOAT(4))
+const static struct TSS_Command * const m_commands[256] = {
+    [(0)] = (const struct TSS_Command[]) 
+    { 
+        {
+            .num = (0), 
+            .out_format = (const struct TSS_Param[])
+            { 
+                {.count = (4), .size = (4) },
+                { 0 }
+                //((const struct TSS_Param) { .count = (4), .size = (4) }), 
+                //((const struct TSS_Param) { 0 }) 
+            }, 
+        }
+    },
     READ_CMD(1, "GetTaredOrientationAsEulerAngles", FLOAT(3))
     READ_CMD(2, "GetTaredOrientationAsRotationMatrix", FLOAT(9))
     READ_CMD(3, "GetTaredOrientationAsAxisAngles", FLOAT(3), FLOAT(1))
@@ -239,6 +251,7 @@ void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uin
     uint16_t size;
 
     size = 0;
+    uncapped = 0;
     while(!TSS_PARAM_IS_NULL(params)) {
         //Treat variable length as max
         if(TSS_PARAM_IS_STRING(params)) {
@@ -253,12 +266,12 @@ void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uin
     *max_size = (uncapped) ? UINT16_MAX : size;
 }
 
-#define SETTING_START(_name) (const struct TSS_Setting) { .name = _name, 
+#define SETTING_START(_name) { .name = _name, 
 #define SETTING_END },
 
-#define RW_SETTING(_name, ...) SETTING_START((_name)) TYPE((__VA_ARGS__)) SETTING_END
-#define R_SETTING(_name, ...) SETTING_START((_name)) OUTPUT((__VA_ARGS__)) SETTING_END
-#define W_SETTING(_name, ...) SETTING_START((_name)) INPUT((__VA_ARGS__)) SETTING_END
+#define RW_SETTING(_name, ...) SETTING_START((_name)) TYPE(__VA_ARGS__) SETTING_END
+#define R_SETTING(_name, ...) SETTING_START((_name)) OUTPUT(__VA_ARGS__) SETTING_END
+#define W_SETTING(_name, ...) SETTING_START((_name)) INPUT(__VA_ARGS__) SETTING_END
 #define CMD_SETTING(_name) SETTING_START((_name)) .in_format = (const struct TSS_Param[]){ NULL_PARAM }, SETTING_END
 
 //Aggregate settings technically don't need to be in the setting table because there is no information needed

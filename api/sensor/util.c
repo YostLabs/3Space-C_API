@@ -1,4 +1,4 @@
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 #include "tss/constants.h"
 #include "internal.h"
 
@@ -8,10 +8,10 @@ int tssUtilStreamSlotStringToCommands(const char *str, const struct TSS_Command*
     struct TSS_Stream_Slot slot = {0};
 
     while(*str && num_slots_read < TSS_NUM_STREAM_SLOTS) {
-        slot.cmd_num = strtol(str, (char**)&str, 10);
+        slot.cmd_num = (uint8_t)strtol(str, (char**)&str, 10);
         if(*str == ':') {
             *str++;
-            slot.param = strtol(str, (char**)&str, 10);
+            slot.param = (uint8_t)strtol(str, (char**)&str, 10);
             slot.has_param = true;
         }
 

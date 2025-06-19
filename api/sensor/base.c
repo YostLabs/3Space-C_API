@@ -8,7 +8,7 @@
 #include "tss/sys/config.h"
 #include "tss/sys/endian.h"
 #include "tss/errors.h"
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 #include "tss/sys/time.h"
 #include <stdarg.h>
 
@@ -64,7 +64,7 @@ int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t si
     }
 
     remaining_len = TSS_DEBUG_MESSAGE_MAX_SIZE - sensor->debug.bytes_read;
-    read_len = (size < remaining_len) ? size : remaining_len;
+    read_len = (size < remaining_len) ? (uint16_t)size : remaining_len;
 
     num_read = sensor->com->in.read_until('\n', output, read_len, sensor->com->user_data);
 
@@ -84,6 +84,8 @@ int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t si
 struct ReconnectionInfo {
     uint64_t serial_number;
     TSS_Sensor *out_sensor;
+
+    uint32_t com_timeout;
 };
 
 static int discoverReconnectCom(struct TSS_Com_Class *com, void *user_data)
@@ -95,6 +97,7 @@ static int discoverReconnectCom(struct TSS_Com_Class *com, void *user_data)
     if(result) { //Failed to open
         return TSS_AUTO_DETECT_CONTINUE;
     }
+    com->in.set_timeout(info->com_timeout, com->user_data);
 
     createTssSensor(info->out_sensor, com);
     initTssSensor(info->out_sensor);
@@ -128,6 +131,7 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
     
     info.serial_number = sensor->serial_number;
     info.out_sensor = sensor;
+    info.com_timeout = sensor->com->in.get_timeout(sensor->com->user_data);
 
     start_time = tssTimeGet();
     do {

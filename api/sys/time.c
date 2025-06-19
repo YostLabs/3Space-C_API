@@ -4,7 +4,7 @@
 #if defined(_WIN32) || defined(_WIN64)
     #define DEFAULT_IMPLEMENTATION
 
-    #include <profileapi.h>
+    #include <windows.h>
     static tss_time_t defaultGetTime(void)
     {   
         LARGE_INTEGER time;
@@ -20,7 +20,7 @@
         QueryPerformanceCounter(&time);
         QueryPerformanceFrequency(&freq);
 
-        return (((double)(time.QuadPart - start_time)) / freq.QuadPart) * 1000;
+        return (uint32_t)((((double)(time.QuadPart - start_time)) / freq.QuadPart) * 1000);
     }
 
 // Detect macOS

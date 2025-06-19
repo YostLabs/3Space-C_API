@@ -32,6 +32,7 @@ int main()
     //------------------------------Create Sensor Object-------------------------------
     TSS_Sensor sensor_base;
     TSS_Sensor *sensor = &sensor_base;
+    printf("Initializing sensor\n");
     createTssSensor(sensor, &ser.com);
     initTssSensor(sensor);
 
@@ -39,6 +40,7 @@ int main()
     uint8_t active;
     sensorBootloaderIsActive(sensor, &active);
     if(!active) {
+        printf("Entering Bootloader...\n");
         sensorEnterBootloader(sensor);
     }
 
@@ -54,16 +56,16 @@ int main()
 
     //--------------------------Open New Firmware Source---------------------------------
     FILE *fptr;
-    fptr = fopen("Application.xml", "r");
+    printf("Opening firmware file.\n");
+    fptr = fopen("Examples/Application.xml", "r");
     if(fptr == NULL) {
         printf("Failed to load firmware file...\n");
         return -1;
     }
-    printf("Successfully opened file\n");
 
     //---------------Feed the new Firmware to the uploader until complete------------------
+    printf("Starting firmware upload process.\n");
     char c;
-    size_t num_read;
     size_t last_packet_num = 0;
     err = 0;
     while(!feof(fptr) && err != 1) {

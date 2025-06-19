@@ -1,6 +1,6 @@
 #include "tss/tools/firmware.h"
 #include "tss/errors.h"
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 
 #define POW_2(x) ((x) && ((x) & ((x) - 1)) == 0)
 
@@ -23,7 +23,7 @@ int tssFirmwareUploaderCreate(TSS_Sensor *sensor, uint8_t *buffer, size_t buffer
     *out = (struct TSS_Firmware_Uploader) {
         .sensor = sensor,
         .buffer = buffer,
-        .buffer_size = buffer_size,
+        .buffer_size = (uint16_t)buffer_size, //Clamped to this range above
         .timeout_erase_ms = 20000,
         .timeout_load_firmware_ms = 2000,
         .timeout_program_ms = 5000

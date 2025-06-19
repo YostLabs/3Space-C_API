@@ -6,7 +6,7 @@
 #include "tss/api/sensor.h"
 #include "internal.h"
 #include "tss/api/core.h"
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 #include "tss/errors.h"
 #include "tss/sys/time.h"
 
@@ -197,7 +197,7 @@ inline static int baseReadSettings(TSS_Sensor *sensor, const char *key_string)
     tssGetSettingsWrite(sensor->com, true, key_string);
 
     //+1 is because the terminating character/delimiter is also required in the response.
-    min_response_len = tssStrLenUntil(key_string, ';');
+    min_response_len = (uint16_t)tssStrLenUntil(key_string, ';');
     if(min_response_len > TSS_SETTING_KEY_ERR_STRING_LEN) {
         min_response_len = TSS_SETTING_KEY_ERR_STRING_LEN;
     }
@@ -534,7 +534,7 @@ static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header) {
         com_length = comLength(sensor);
         if(sensor->streaming.data.active && header->echo == TSS_STREAMING_DATA_BATCH_COMMAND_NUM) {
             expected_out_size = sensor->streaming.data.output_size;
-            if(com_length < expected_out_size + sensor->header_cfg.size && com_length < peekCapacity(sensor)) {
+            if(com_length < (uint16_t)(expected_out_size + sensor->header_cfg.size) && com_length < peekCapacity(sensor)) {
                 return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
             }
             if(peekValidatePacket(sensor, header, expected_out_size, expected_out_size) == TSS_SUCCESS) {
@@ -544,7 +544,7 @@ static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header) {
         }
         else if(sensor->streaming.log.active && header->echo == TSS_STREAMING_FILE_READ_BYTES_COMMAND_NUM) {
             expected_out_size = (header->length < TSS_LOG_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_LOG_STREAMING_MAX_PACKET_SIZE;
-            if(com_length < expected_out_size + sensor->header_cfg.size && com_length < peekCapacity(sensor)) {
+            if(com_length < (uint16_t)(expected_out_size + sensor->header_cfg.size) && com_length < peekCapacity(sensor)) {
                 return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
             }
             if(peekValidatePacket(sensor, header, expected_out_size, expected_out_size) == TSS_SUCCESS) {
@@ -554,7 +554,7 @@ static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header) {
         }
         else if(sensor->streaming.file.active && header->echo == TSS_STREAMING_FILE_READ_BYTES_COMMAND_NUM) {
             expected_out_size = (header->length < TSS_FILE_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_FILE_STREAMING_MAX_PACKET_SIZE;
-            if(com_length < expected_out_size + sensor->header_cfg.size && peekCapacity(sensor)) {
+            if(com_length < (uint16_t)(expected_out_size + sensor->header_cfg.size) && peekCapacity(sensor)) {
                 return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
             }
             if(peekValidatePacket(sensor, header, expected_out_size, expected_out_size) == TSS_SUCCESS) {
@@ -597,7 +597,7 @@ static int peekCheckDebugMessage(TSS_Sensor *sensor) {
     peek_len = sizeof(buffer) -1;
     com_length = comLength(sensor);
     if(com_length < peek_len) {
-        peek_len = com_length;
+        peek_len = (uint8_t)com_length;
     }
 
     err_or_num_read = sensor->com->in.peek(0, peek_len, buffer, sensor->com->user_data);

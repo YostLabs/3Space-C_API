@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "tss/sys/config.h"
+#include "tss/export.h"
 
 //Set endianness based on override or auto detect
 #if TSS_ENDIAN_OVERRIDE 
@@ -42,6 +43,14 @@
 #define TSS_ENDIAN_SWAP_BIG_TO_DEVICE(data, size) TSS_ENDIAN_SWAP_DEVICE_TO_BIG(data, size)
 #define TSS_ENDIAN_SWAP_LITTLE_TO_DEVICE(data, size) TSS_ENDIAN_SWAP_DEVICE_TO_LITTLE(data, size)
 
-void tssSwapEndianess(void *data, uint16_t p_size);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+TSS_API void tssSwapEndianess(void *data, uint16_t p_size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __TSS_ENDIAN_H__ */

@@ -3,7 +3,7 @@
 #include "tss/api/sensor.h"
 #include "internal.h"
 #include "tss/api/core.h"
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 #include "tss/errors.h"
 
 void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)

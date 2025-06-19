@@ -20,7 +20,7 @@ uint32_t get_timeout(void *user_data);
 static void clear_immediate(void *user_data);
 static void clear_timeout(void *user_data, uint32_t timeout_ms);
 
-static int write(const uint8_t *bytes, uint32_t len, void *user_data);
+static int write(const uint8_t *bytes, size_t len, void *user_data);
 
 #if TSS_BUFFERED_WRITES
 static int begin_write(void *user_data);
@@ -77,7 +77,7 @@ void create_serial_com_class(uint8_t port, struct SerialComClass *out)
 #endif
 }
 
-static int write(const uint8_t *bytes, uint32_t len, void *user_data)
+static int write(const uint8_t *bytes, size_t len, void *user_data)
 {
     struct SerialComClass *com = user_data;
 
@@ -169,7 +169,7 @@ static int _read(size_t num_bytes, uint8_t *out, void *user_data, bool immediate
     struct SerialComClass *com = user_data;
 
     //First read data from the peek buffer
-    uint16_t peek_len = ring_size(&com->in_ring);
+    size_t peek_len = ring_size(&com->in_ring);
     for(i = 0; i < peek_len && i < num_bytes; i++) {
         out[i] = ring_pop(&com->in_ring);
     }
@@ -210,7 +210,7 @@ static int read_until(uint8_t value, uint8_t *out, size_t size, void *user_data)
 
 static int peek(size_t start, size_t num_bytes, uint8_t *out, void *user_data)
 {
-    uint16_t i, num_peeked;
+    uint16_t i;
     struct SerialComClass *com = user_data;
     size_t required_length = start + num_bytes;
     size_t len;
@@ -265,7 +265,7 @@ static int peek_until(size_t start, uint8_t value, uint8_t *out, size_t size, vo
 }
 
 inline static void fill_in_buffer(struct SerialComClass *com) {
-    uint16_t space, start_index, end_index, start_len, read_len;
+    size_t space, start_index, end_index, start_len, read_len;
 
     space = ring_space(&com->in_ring);
     if(space == 0) return;
@@ -362,7 +362,6 @@ struct PortEnumerate {
 
 static uint8_t auto_detect(const char *name, uint8_t port, void *user_data)
 {
-    int result;
     struct PortEnumerate *params = user_data;
 
     //TSS_Com_Class is the first element of  SerialComClass, so this is a valid cast

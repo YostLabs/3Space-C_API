@@ -1,17 +1,5 @@
 #include "tss/api/sensor.h"
-#include "tss/sys/string.h"
-
-//---------------------------------------CUSTOM-------------------------------------------
-
-int sensorReadCat(TSS_Sensor *sensor, const char *out, uint32_t size)
-{
-    return sensorReadSettings(sensor, "cat", out, size);
-}
-
-int sensorWriteCat(TSS_Sensor *sensor, const char *value)
-{
-    return sensorWriteSettings(sensor, (const char*[]) { "cat" }, 1, (const void*[]) { value });
-}
+#include "tss/sys/stdinc.h"
 
 //-----------------------------------AUTO GENERATED---------------------------------------
 

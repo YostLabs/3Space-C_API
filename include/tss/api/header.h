@@ -1,6 +1,7 @@
 #ifndef __TSS_HEADER_H__
 #define __TSS_HEADER_H__
 
+#include "tss/export.h"
 #include <stdint.h>
 
 #define TSS_HEADER_STATUS_BIT_POS       0
@@ -32,9 +33,17 @@ struct TSS_Header {
     uint16_t length;
 };
 
-struct TSS_Header_Info tssHeaderInfoFromBitfield(uint8_t bitfield);
-uint8_t tssHeaderSizeFromBitfield(uint8_t bitfield);
-uint8_t tssHeaderPosFromBitfield(uint8_t bitfield, uint8_t bit);
-void tssHeaderFromBytes(const struct TSS_Header_Info *info, uint8_t *data, struct TSS_Header *out);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+TSS_API struct TSS_Header_Info tssHeaderInfoFromBitfield(uint8_t bitfield);
+TSS_API uint8_t tssHeaderSizeFromBitfield(uint8_t bitfield);
+TSS_API uint8_t tssHeaderPosFromBitfield(uint8_t bitfield, uint8_t bit);
+TSS_API void tssHeaderFromBytes(const struct TSS_Header_Info *info, uint8_t *data, struct TSS_Header *out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __TSS_HEADER_H__ */

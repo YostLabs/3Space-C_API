@@ -7,7 +7,7 @@
 #include "tss/sys/config.h"
 #include "tss/sys/endian.h"
 
-#include "tss/sys/string.h"
+#include "tss/sys/stdinc.h"
 #include <stdarg.h>
 
 //---------------------------------PROTOTYPES-------------------------------------
@@ -22,8 +22,7 @@ inline static void swap_param_endianess(uint8_t *data, const struct TSS_Param *p
 //This is undesirable as this works via the raw bytes not the types, and so it is avoided by using a void** instead.
 int tssWriteCommand(const struct TSS_Com_Class *com, bool header, const struct TSS_Command *command, const void **data)
 {   
-    const struct TSS_Param *cur_param;
-    uint8_t start_byte, checksum, element_index, i;
+    uint8_t start_byte, checksum;
 
     checksum = command->num;
     start_byte = (header) ? TSS_BINARY_HEADER_START_BYTE : TSS_BINARY_START_BYTE;
@@ -241,6 +240,7 @@ size_t tssBuildGetSettingsStringBinary(uint8_t *out, size_t out_size, uint16_t c
     va_end(args);
 
     //Compute the checksum
+    checksum = 0;
     while(*out != '\0') checksum += *out++;
 
     //Add the null terminator as part of the data
@@ -288,8 +288,7 @@ int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback
     enum TSS_SettingsCallbackState cb_state;
     const char *key;
     const struct TSS_Setting *setting;
-    uint8_t len, checksum, num_read, i;
-    uint16_t param_size;
+    uint8_t len, checksum, num_read;
     bool end_reached;
     int err;
     
@@ -512,7 +511,7 @@ inline static void send_param(const struct TSS_Com_Class *com, const struct TSS_
 {
     uint8_t element, conversion[8]; //Max U64 is 8 bytes
     uint8_t i;
-    uint16_t param_len;
+    size_t param_len;
     bool is_str;
 
     is_str = TSS_PARAM_IS_STRING(cur_param);
@@ -648,16 +647,18 @@ int tssReadParamsChecksumOnly(const struct TSS_Com_Class *com, const struct TSS_
         }
         cur_param++;
     }
+
+    return TSS_SUCCESS;
 }
 
 int tssReadBytesChecksumOnly(const struct TSS_Com_Class *com, size_t num_bytes, uint8_t *checksum)
 {
     uint8_t buffer[40]; //Will read at most 40 bytes at a time
-    uint16_t read_len, num_read;
+    size_t read_len, num_read;
     uint8_t i;
 
     while(num_bytes > 0) {
-        read_len = (num_bytes > sizeof(buffer)) ? sizeof(buffer) : num_bytes;
+        read_len = (num_bytes > sizeof(buffer)) ? (uint16_t)sizeof(buffer) : num_bytes;
         num_read = com->in.read(read_len, buffer, com->user_data);
         if(read_len != num_read) {
             return TSS_ERR_READ;
