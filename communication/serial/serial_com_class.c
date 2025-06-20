@@ -70,7 +70,7 @@ void create_serial_com_class(uint8_t port, struct SerialComClass *out)
     out->com.out.end_write = end_write;
 #endif
 #if TSS_MINIMAL_SENSOR == 0
-    out->in_ring = (struct RingBuf2) {
+    out->in_ring = (struct TSS_Ring_Buf2) {
         .data = out->_in_buffer,
         .capacity = sizeof(out->_in_buffer)
     };
@@ -165,7 +165,7 @@ static int read_until(uint8_t value, uint8_t *out, size_t size, void *user_data)
 
 static int _read(size_t num_bytes, uint8_t *out, void *user_data, bool immediate)
 {
-    uint16_t i;
+    size_t i;
     struct SerialComClass *com = user_data;
 
     //First read data from the peek buffer

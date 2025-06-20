@@ -11,7 +11,7 @@ struct SerialComClass {
 
 #if TSS_MINIMAL_SENSOR == 0
     //Required buffer for implementing peek functionality
-    struct RingBuf2 in_ring;
+    struct TSS_Ring_Buf2 in_ring;
     uint8_t _in_buffer[4096];
 #endif
 

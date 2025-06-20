@@ -83,7 +83,7 @@ static void initFirmware(TSS_Sensor *sensor) {
 static void cacheHeader(TSS_Sensor *sensor) {
     uint8_t header;
     sensorReadHeader(sensor, &header);
-    if(header == sensor->header_cfg.bitfield) return; //Nothing to update
+    if(header == sensor->header_cfg.bitfield && (header & REQUIRED_HEADER_BITS) == REQUIRED_HEADER_BITS) return; //Nothing to update
 
     //Do not allow changing the header if currently streaming to prevent misalignment issues
     if(sensorIsStreaming(sensor)) {

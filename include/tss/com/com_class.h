@@ -17,6 +17,8 @@
 struct TSS_Input_Stream {
     //Read functions return the number of bytes read
     int (*read)(size_t num_bytes, uint8_t *out, void *user_data);
+    //"Until" functions should include up to and including the value specified by value
+    int(*read_until)(uint8_t value, uint8_t *out, size_t size, void *user_data);
 
     //Peek functions return the number of bytes read.
 
@@ -38,15 +40,14 @@ struct TSS_Input_Stream {
     //If peek functionality is not desired at all, TSS_MINIMAL_SENSOR can be set in the tss/sys/config.h
     //and a version of the API that does NOT validate by looking ahead is available. Do note that version
     //has no capability of automatically realigning/recovering from corrupt data.
+#if !(TSS_MINIMAL_SENSOR)
     int (*peek)(size_t start, size_t num_bytes, uint8_t *out, void *user_data);
-
-    //These should include up to and including the value specified by value
-    int(*read_until)(uint8_t value, uint8_t *out, size_t size, void *user_data);
     int(*peek_until)(size_t start, uint8_t value, uint8_t *out, size_t size, void *user_data);
-
-    size_t (*length)(void *user_data);
     size_t (*peek_capacity)(void *user_data);
+    size_t (*length)(void *user_data);
+#endif
 
+    //Note: Setting timeout to 0 should result in an instantaneous read, not an indefinite block
     void (*set_timeout)(uint32_t timeout, void *user_data);
     uint32_t (*get_timeout)(void *user_data);
 
