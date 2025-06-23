@@ -124,7 +124,14 @@ void serSetTimeout(struct SerialDevice *ser, uint32_t timeout_ms)
     
     COMMTIMEOUTS timeouts;
     GetCommTimeouts(ser->handle, &timeouts);
-    timeouts.ReadIntervalTimeout = 0;
+    if(timeout_ms == 0) {
+        //Timeout of 0 means return instantly. That is configured
+        //by setting this to MAXDWORD and the Multiplier and Constant to 0
+        timeouts.ReadIntervalTimeout = MAXDWORD;
+    }
+    else {
+        timeouts.ReadIntervalTimeout = 0;
+    }
     timeouts.ReadTotalTimeoutMultiplier = 0;
     timeouts.ReadTotalTimeoutConstant = timeout_ms;
     SetCommTimeouts(ser->handle, &timeouts);
