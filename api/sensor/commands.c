@@ -128,17 +128,13 @@ int sensorEnterBootloader(TSS_Sensor *sensor) {
     sensor->_header_enabled = header_was_enabled;
 
     //TODO: Same question as above
-    if(sensor->com->reenumerates) {
-        if(sensorReconnect(sensor, 2000) != TSS_SUCCESS) {
-            return TSS_ERR_DETECTION;
-        }
+    if(sensorReconnect(sensor, 2000) != TSS_SUCCESS) {
+        return TSS_ERR_DETECTION;
     }
 
-    //Ensure entered bootloader
-    result = sensorInternalBootloaderCheckActive(sensor, &active);
-    if(result != TSS_SUCCESS) return result;
-    sensor->_in_bootloader = active;
-    if(!active) {
+    //Ensure entered bootloader, will have been set
+    //when reconnecting above.
+    if(!sensor->_in_bootloader) {
         return TSS_ERR_NOT_IN_BOOTLOADER;
     }
 

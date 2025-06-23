@@ -115,7 +115,7 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
     tss_time_t start_time;
     int result;
 
-    if(!sensor->com->reenumerates) {
+    if(sensor->com->reenumerate == NULL) {
         //If it doesn't reenumerate, then just ensure the port is open
         result = sensor->com->open(sensor->com->user_data);
         if(result != TSS_SUCCESS) return TSS_ERR_DETECTION;
@@ -125,9 +125,6 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
 
     //Sensor does reenumerate, so may have to find a new port. Close and search.
     sensor->com->close(sensor->com->user_data);
-    if(sensor->com->auto_detect == NULL) {
-        return TSS_ERR_UNIMPLEMENTED_DETECTION;
-    }
     
     info.serial_number = sensor->serial_number;
     info.out_sensor = sensor;
@@ -135,7 +132,7 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
 
     start_time = tssTimeGet();
     do {
-        result = sensor->com->auto_detect(sensor->com, discoverReconnectCom, &info);
+        result = sensor->com->reenumerate(discoverReconnectCom, &info, sensor->com->user_data);
     } while(result != TSS_AUTO_DETECT_SUCCESS && tssTimeDiff(start_time) < timeout_ms);
 
     //No need to initialize the sensor once found because part of finding it involves initializing it

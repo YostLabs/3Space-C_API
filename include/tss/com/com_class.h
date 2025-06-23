@@ -110,11 +110,12 @@ struct TSS_Com_Class {
     //return success.
     int (*close)(void *user_data);
 
-    //Set this to true if the communication object
-    //may need rediscovered when the sensor restarts.
+    //Some com devices may need to be rediscovered when reconnecting.
+    //This function provides a way to reconnect to a device, while using the same
+    //com object, based on a condition provided by a callback and its user data.
     //(It is common for a USB connection to reenumerate when 
     //the sensor restarts/enters bootloader)
-    bool reenumerates;
+    int (*reenumerate)(TssComAutoDetectCallback cb, void *detect_data, void *user_data);
 
     //Only required to be implemented if reenumerates is set to true.
     //Alternatively, leave reenumerate as false and manually handle connection
@@ -122,7 +123,7 @@ struct TSS_Com_Class {
     //NOTE: This user data is user data meant for the callback function provided, not
     //the user data of a specific instance of a ComClass.
     //If cb is NULL, the function should not call it and treat its return value as TSS_AUTO_DETECT_SUCCESS
-    int (*auto_detect)(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *user_data);
+    int (*auto_detect)(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *detect_data);
 
 
     //Common info passed to most ComClass functions.
@@ -133,5 +134,9 @@ struct TSS_Com_Class {
     //data, make sure to pass this as well.
     void *user_data;
 };
+
+static int tssComDefaultReadUntil(uint8_t value, uint8_t *out, size_t size, void *user_data);
+static void tssComDefaultClearImmediate(void *user_data);
+static void tssComDefaultClearTimeout(void *user_data, uint32_t timeout_ms);
 
 #endif /* __COM_CLASS_H__ */
