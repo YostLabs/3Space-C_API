@@ -58,3 +58,9 @@ uint32_t tssTimeDiff(tss_time_t start_time)
 {
     return diffTimeFunc(start_time);
 }
+
+void tssTimeSetFunctions(tss_time_t (*timeGet)(void), uint32_t (*timeDiff)(tss_time_t))
+{
+    getTimeFunc = timeGet;
+    diffTimeFunc = timeDiff;
+}
