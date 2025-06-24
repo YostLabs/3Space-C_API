@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+
 #include "tss/export.h"
 #include "tss/api/sensor.h"
 

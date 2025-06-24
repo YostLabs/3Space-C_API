@@ -11,8 +11,10 @@
 #define __COM_CLASS_H__
 
 #include "tss/sys/config.h"
+
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 struct TSS_Input_Stream {
     //Read functions return the number of bytes read

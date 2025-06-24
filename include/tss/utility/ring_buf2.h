@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define TSS_RING_POW_2(x) ((x) && ((x) & ((x) - 1)) == 0)
 

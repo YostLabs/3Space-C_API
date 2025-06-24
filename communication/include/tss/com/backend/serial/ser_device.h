@@ -2,6 +2,7 @@
 #define __TSS_SERIAL_DEVICE_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include "tss/com/backend/serial/win_serial.h"

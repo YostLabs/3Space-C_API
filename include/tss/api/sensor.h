@@ -13,7 +13,10 @@
 #include "tss/api/header.h"
 #include "tss/api/command.h"
 #include "tss/api/core.h"
+
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
