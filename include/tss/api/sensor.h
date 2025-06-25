@@ -50,6 +50,7 @@ struct TSS_Sensor {
     //Cached Data
     struct TSS_Header last_header;
     struct TSS_Setting_Response last_write_setting_response;
+    uint16_t last_num_settings_read;
 
     //Streaming Information
     struct {
@@ -83,11 +84,11 @@ struct TSS_Sensor {
 };
 
 //------------------------INITIALIZATION----------------------------------------
-TSS_API void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com);
-TSS_API void initTssSensor(TSS_Sensor *sensor);
+TSS_API void tssCreateSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com);
+TSS_API int tssInitSensor(TSS_Sensor *sensor);
 
 //-------------------------------MANUAL MANAGEMENT-----------------------------------------
-TSS_API void sensorUpdateCachedSettings(TSS_Sensor *sensor);
+TSS_API int sensorUpdateCachedSettings(TSS_Sensor *sensor);
 
 /// @brief Should be called if changes are made to the sensor without using the sensor API.
 /// The sensor will automatically reinitialize to a known state next time an API function is called
@@ -113,6 +114,9 @@ static inline struct TSS_Header sensorGetLastHeader(TSS_Sensor *sensor) {
 }
 static inline struct TSS_Setting_Response sensorGetLastSettingResponse(TSS_Sensor *sensor) {
     return sensor->last_write_setting_response;
+}
+static inline uint16_t sensorGetLastSettingsNumRead(TSS_Sensor *sensor) {
+    return sensor->last_num_settings_read;
 }
 static inline bool sensorIsStreaming(TSS_Sensor *sensor) {
     return sensor->streaming.data.active || sensor->streaming.file.active || sensor->streaming.log.active;
@@ -140,9 +144,9 @@ TSS_API int sensorProcessFileStreamingCallbackOutput(TSS_Sensor *sensor, void *o
 TSS_API int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t size);
 
 //--------------------------------CUSTOM COMMAND DECLARATIONS--------------------------------------
-TSS_API int sensorStartStreaming(TSS_Sensor *sensor, TssDataCallback cb);
-TSS_API int sensorStreamFile(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size);
-TSS_API int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb);
+TSS_API int sensorStreamingStart(TSS_Sensor *sensor, TssDataCallback cb);
+TSS_API int sensorFileStreamingStart(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size);
+TSS_API int sensorLoggingStart(TSS_Sensor *sensor, TssDataCallback cb);
 
 /// @brief Disconnects and reconnects to the sensor. May
 /// require additional com class functionality (Reenumerate/Auto Detect)
@@ -215,13 +219,13 @@ TSS_API int sensorGetNormalizedMagnetometerVectorByID(TSS_Sensor *sensor, uint8_
 TSS_API int sensorGetCorrectedGyroRateByID(TSS_Sensor *sensor, uint8_t id, float out_gyro[3]);
 TSS_API int sensorGetCorrectedAccelerometerVectorByID(TSS_Sensor *sensor, uint8_t id, float out_accel[3]);
 TSS_API int sensorGetCorrectedMagnetometerVectorByID(TSS_Sensor *sensor, uint8_t id, float out_mag[3]);
-TSS_API int sensorEnableMassStorageController(TSS_Sensor *sensor);
-TSS_API int sensorDisableMassStorageController(TSS_Sensor *sensor);
+TSS_API int sensorMassStorageControllerEnable(TSS_Sensor *sensor);
+TSS_API int sensorMassStorageControllerDisable(TSS_Sensor *sensor);
 TSS_API int sensorFormatSDCard(TSS_Sensor *sensor);
-TSS_API int sensorStopLogging(TSS_Sensor *sensor);
+TSS_API int sensorLoggingStop(TSS_Sensor *sensor);
 TSS_API int sensorSetClockValues(TSS_Sensor *sensor, uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second);
 TSS_API int sensorGetClockValues(TSS_Sensor *sensor, uint16_t *out_year, uint8_t *out_month, uint8_t *out_day, uint8_t *out_hour, uint8_t *out_minute, uint8_t *out_second);
-TSS_API int sensorGetLoggingStatus(TSS_Sensor *sensor, uint8_t *out_status);
+TSS_API int sensorLoggingGetStatus(TSS_Sensor *sensor, uint8_t *out_status);
 TSS_API int sensorGetRawGyroRateByID(TSS_Sensor *sensor, uint8_t id, float out_gyro[3]);
 TSS_API int sensorGetRawAccelerometerVectorByID(TSS_Sensor *sensor, uint8_t id, float out_accel[3]);
 TSS_API int sensorGetRawMagnetometerVectorByID(TSS_Sensor *sensor, uint8_t id, float out_mag[3]);
@@ -245,10 +249,10 @@ TSS_API int sensorEEPTSGetNewestStep(TSS_Sensor *sensor, uint32_t *out_segment_c
 TSS_API int sensorEEPTSGetAvailableStepCount(TSS_Sensor *sensor, uint8_t *out_count);
 TSS_API int sensorEEPTSInsertGPS(TSS_Sensor *sensor, double Latitude, double Longitude);
 TSS_API int sensorEEPTSAutoOffset(TSS_Sensor *sensor);
-TSS_API int sensorGetStreamingCommandLabel(TSS_Sensor *sensor, uint8_t cmd_number, char *out_label, uint32_t size);
-TSS_API int sensorGetStreamingBatch(TSS_Sensor *sensor, ...);
-TSS_API int sensorStopStreaming(TSS_Sensor *sensor);
-TSS_API int sensorPauseLogStreaming(TSS_Sensor *sensor, uint8_t pause);
+TSS_API int sensorStreamingGetCommandLabel(TSS_Sensor *sensor, uint8_t cmd_number, char *out_label, uint32_t size);
+TSS_API int sensorStreamingGetPacket(TSS_Sensor *sensor, ...);
+TSS_API int sensorStreamingStop(TSS_Sensor *sensor);
+TSS_API int sensorLoggingPauseStreaming(TSS_Sensor *sensor, uint8_t pause);
 TSS_API int sensorGetTimestamp(TSS_Sensor *sensor, uint64_t *out_timestamp);
 TSS_API int sensorSetTimestamp(TSS_Sensor *sensor, uint64_t timestamp);
 TSS_API int sensorSetTareWithCurrentOrientation(TSS_Sensor *sensor);
@@ -261,25 +265,25 @@ TSS_API int sensorBeginPassiveCalibration(TSS_Sensor *sensor, uint8_t mode);
 TSS_API int sensorGetPassiveCalibrationActive(TSS_Sensor *sensor, uint8_t *out_state);
 TSS_API int sensorBeginActiveCalibration(TSS_Sensor *sensor);
 TSS_API int sensorGetActiveCalibrationActive(TSS_Sensor *sensor, uint8_t *out_state);
-TSS_API int sensorGetLastLiveLoggingLocation(TSS_Sensor *sensor, uint64_t *out_cursor_index, char *out_path, uint32_t size);
-TSS_API int sensorGetNextDirectoryItem(TSS_Sensor *sensor, uint8_t *out_type, char *out_name, uint32_t size, uint64_t *out_size);
-TSS_API int sensorChangeDirectory(TSS_Sensor *sensor, const char *path);
-TSS_API int sensorOpenFile(TSS_Sensor *sensor, const char *path);
+TSS_API int sensorLoggingGetLastLiveLocation(TSS_Sensor *sensor, uint64_t *out_cursor_index, char *out_path, uint32_t size);
+TSS_API int sensorFsGetNextDirectoryItem(TSS_Sensor *sensor, uint8_t *out_type, char *out_name, uint32_t size, uint64_t *out_size);
+TSS_API int sensorFsChangeDirectory(TSS_Sensor *sensor, const char *path);
+TSS_API int sensorFsOpenFile(TSS_Sensor *sensor, const char *path);
 TSS_API int sensorCloseFile(TSS_Sensor *sensor);
-TSS_API int sensorGetRemainingFileSize(TSS_Sensor *sensor, uint64_t *out_size);
-TSS_API int sensorReadLine(TSS_Sensor *sensor, char *out_line, uint32_t size);
-TSS_API int sensorReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data);
-TSS_API int sensorDeleteFileOrFolder(TSS_Sensor *sensor, const char *path);
-TSS_API int sensorSetCursorIndex(TSS_Sensor *sensor, uint64_t index);
-TSS_API int sensorStopStreamingFile(TSS_Sensor *sensor);
-TSS_API int sensorGetBatteryVoltage(TSS_Sensor *sensor, float *out_voltage);
-TSS_API int sensorGetBatteryPercent(TSS_Sensor *sensor, uint8_t *out_percent);
-TSS_API int sensorGetBatteryStatus(TSS_Sensor *sensor, uint8_t *out_status);
-TSS_API int sensorGetGPSLatitudeandLongitude(TSS_Sensor *sensor, double *out_latitude, double *out_longitude);
-TSS_API int sensorGetGPSAltitude(TSS_Sensor *sensor, float *out_meters);
-TSS_API int sensorGetGPSFixStatus(TSS_Sensor *sensor, uint8_t *out_fix);
-TSS_API int sensorGetGPSHDOP(TSS_Sensor *sensor, uint8_t *out_hdop);
-TSS_API int sensorGetGPSSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites);
+TSS_API int sensorFileGetRemainingSize(TSS_Sensor *sensor, uint64_t *out_size);
+TSS_API int sensorFileReadLine(TSS_Sensor *sensor, char *out_line, uint32_t size);
+TSS_API int sensorFileReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data);
+TSS_API int sensorFsDeleteFileOrFolder(TSS_Sensor *sensor, const char *path);
+TSS_API int sensorFileSetCursorIndex(TSS_Sensor *sensor, uint64_t index);
+TSS_API int sensorFileStreamingStop(TSS_Sensor *sensor);
+TSS_API int sensorBatteryGetVoltage(TSS_Sensor *sensor, float *out_voltage);
+TSS_API int sensorBatteryGetPercent(TSS_Sensor *sensor, uint8_t *out_percent);
+TSS_API int sensorBatteryGetStatus(TSS_Sensor *sensor, uint8_t *out_status);
+TSS_API int sensorGPSGetLatitudeandLongitude(TSS_Sensor *sensor, double *out_latitude, double *out_longitude);
+TSS_API int sensorGPSGetAltitude(TSS_Sensor *sensor, float *out_meters);
+TSS_API int sensorGPSGetFixStatus(TSS_Sensor *sensor, uint8_t *out_fix);
+TSS_API int sensorGPSGetHDOP(TSS_Sensor *sensor, uint8_t *out_hdop);
+TSS_API int sensorGPSGetSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites);
 TSS_API int sensorCommitSettings(TSS_Sensor *sensor);
 TSS_API int sensorSoftwareReset(TSS_Sensor *sensor);
 TSS_API int sensorEnterBootloader(TSS_Sensor *sensor);

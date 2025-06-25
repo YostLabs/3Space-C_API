@@ -6,7 +6,7 @@
 #include "tss/sys/stdinc.h"
 #include "tss/errors.h"
 
-void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
+void tssCreateSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 {
     *sensor = (TSS_Sensor) {
         .com = com
@@ -17,7 +17,7 @@ void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 
 static void initFirmware(TSS_Sensor *sensor);
 
-void initTssSensor(TSS_Sensor *sensor) {
+void tssInitSensor(TSS_Sensor *sensor) {
     uint8_t in_bootloader;
     sensorInternalForceStopStreaming(sensor);
 

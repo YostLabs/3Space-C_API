@@ -42,19 +42,7 @@
 //It is just considered a base cmd.
 
 const static struct TSS_Command * const m_commands[256] = {
-    [(0)] = (const struct TSS_Command[]) 
-    { 
-        {
-            .num = (0), 
-            .out_format = (const struct TSS_Param[])
-            { 
-                {.count = (4), .size = (4) },
-                { 0 }
-                //((const struct TSS_Param) { .count = (4), .size = (4) }), 
-                //((const struct TSS_Param) { 0 }) 
-            }, 
-        }
-    },
+    READ_CMD(0, "GetTaredOrientation", FLOAT(4))
     READ_CMD(1, "GetTaredOrientationAsEulerAngles", FLOAT(3))
     READ_CMD(2, "GetTaredOrientationAsRotationMatrix", FLOAT(9))
     READ_CMD(3, "GetTaredOrientationAsAxisAngles", FLOAT(3), FLOAT(1))
@@ -152,14 +140,14 @@ const static struct TSS_Command * const m_commands[256] = {
     OUTPUT(FLOAT(3))
     CMD_END
 
-    ACTION_CMD(57, "EnableMassStorageController")
-    ACTION_CMD(58, "DisableMassStorageController")
+    ACTION_CMD(57, "MassStorageControllerEnable")
+    ACTION_CMD(58, "MassStorageControllerDisable")
     ACTION_CMD(59, "FormatSDCard")
-    ACTION_CMD(60, "StartLogging")
-    ACTION_CMD(61, "StopLogging")
+    ACTION_CMD(60, "LoggingStart")
+    ACTION_CMD(61, "LoggingStop")
     WRITE_CMD(62, "SetClockValues", U16(1), U8(1), U8(1), U8(1), U8(1), U8(1))
     READ_CMD(63, "GetClockValues", U16(1), U8(1), U8(1), U8(1), U8(1), U8(1))
-    READ_CMD(64, "GetLoggingStatus", U8(1))
+    READ_CMD(64, "LoggingGetStatus", U8(1))
 
     CMD_START(65, "GetRawGyroRateByID")
     INPUT(U8(1))
@@ -180,22 +168,21 @@ const static struct TSS_Command * const m_commands[256] = {
 
     ACTION_CMD(68, "EEPTSStart")
     ACTION_CMD(69, "EEPTSStop")
-
     READ_CMD(70, "EEPTSGetOldestStep", U32(1), U32(1), DOUBLE(1), DOUBLE(1), FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), U8(1), U8(1), FLOAT(1), FLOAT(1))
     READ_CMD(71, "EEPTSGetNewestStep", U32(1), U32(1), DOUBLE(1), DOUBLE(1), FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), U8(1), U8(1), FLOAT(1), FLOAT(1))
     READ_CMD(72, "EEPTSGetAvailableStepCount", U8(1))
     WRITE_CMD(73, "EEPTSInsertGPS", DOUBLE(1), DOUBLE(1))
     ACTION_CMD(74, "EEPTSAutoOffset")
 
-    CMD_START(83, "GetStreamingCommandLabel")
+    CMD_START(83, "StreamingGetCommandLabel")
     INPUT(U8(1))
     OUTPUT(STRING(1))
     CMD_END
 
-    READ_CMD(84, "GetStreamingBatch", DYNAMIC_TYPE)
-    ACTION_CMD(85, "StartStreaming")
-    ACTION_CMD(86, "StopStreaming")
-    WRITE_CMD(87, "PauseLogStreaming", U8(1))
+    READ_CMD(84, "StreamingGetPacket", DYNAMIC_TYPE)
+    ACTION_CMD(85, "StreamingStart")
+    ACTION_CMD(86, "StreamingStop")
+    WRITE_CMD(87, "LoggingPauseStreaming", U8(1))
     READ_CMD(94, "GetTimestamp", U64(1))
     WRITE_CMD(95, "SetTimestamp", U64(1))
     ACTION_CMD(96, "SetTareWithCurrentOrientation")
@@ -208,36 +195,35 @@ const static struct TSS_Command * const m_commands[256] = {
     READ_CMD(166, "GetPassiveCalibrationActive", U8(1))
     ACTION_CMD(167, "BeginActiveCalibration")
     READ_CMD(168, "GetActiveCalibrationActive", U8(1))
-    READ_CMD(170, "GetLastLiveLoggingLocation", U64(1), STRING(1))
-    READ_CMD(171, "GetNextDirectoryItem", U8(1), STRING(1), U64(1))
-    WRITE_CMD(172, "ChangeDirectory", STRING(1))
-    WRITE_CMD(173, "OpenFile", STRING(1))
+    READ_CMD(170, "LoggingGetLastLiveLocation", U64(1), STRING(1))
+    READ_CMD(171, "FsGetNextDirectoryItem", U8(1), STRING(1), U64(1))
+    WRITE_CMD(172, "FsChangeDirectory", STRING(1))
+    WRITE_CMD(173, "FsOpenFile", STRING(1))
     ACTION_CMD(174, "CloseFile")
-    READ_CMD(175, "GetRemainingFileSize", U64(1))
-    READ_CMD(176, "ReadLine", STRING(1))
-    
-    CMD_START(177, "ReadBytes")
+    READ_CMD(175, "FileGetRemainingSize", U64(1))
+    READ_CMD(176, "FileReadLine", STRING(1))
+
+    CMD_START(177, "FileReadBytes")
     INPUT(U16(1))
     OUTPUT(DYNAMIC_TYPE)
     CMD_END
 
-    WRITE_CMD(178, "DeleteFileOrFolder", STRING(1))
-    WRITE_CMD(179, "SetCursorIndex", U64(1))
-
-    READ_CMD(180, "StreamFile", U64(1))
-    ACTION_CMD(181, "StopStreamingFile")
-    READ_CMD(201, "GetBatteryVoltage", FLOAT(1))
-    READ_CMD(202, "GetBatteryPercent", U8(1))
-    READ_CMD(203, "GetBatteryStatus", U8(1))
-    READ_CMD(215, "GetGPSLatitudeandLongitude", DOUBLE(1), DOUBLE(1))
-    READ_CMD(216, "GetGPSAltitude", FLOAT(1))
-    READ_CMD(217, "GetGPSFixStatus", U8(1))
-    READ_CMD(218, "GetGPSHDOP", U8(1))
-    READ_CMD(219, "GetGPSSatellites", U8(1))
+    WRITE_CMD(178, "FsDeleteFileOrFolder", STRING(1))
+    WRITE_CMD(179, "FileSetCursorIndex", U64(1))
+    READ_CMD(180, "FileStreamingStart", U64(1))
+    ACTION_CMD(181, "FileStreamingStop")
+    READ_CMD(201, "BatteryGetVoltage", FLOAT(1))
+    READ_CMD(202, "BatteryGetPercent", U8(1))
+    READ_CMD(203, "BatteryGetStatus", U8(1))
+    READ_CMD(215, "GPSGetLatitudeandLongitude", DOUBLE(1), DOUBLE(1))
+    READ_CMD(216, "GPSGetAltitude", FLOAT(1))
+    READ_CMD(217, "GPSGetFixStatus", U8(1))
+    READ_CMD(218, "GPSGetHDOP", U8(1))
+    READ_CMD(219, "GPSGetSatellites", U8(1))
     ACTION_CMD(225, "CommitSettings")
     ACTION_CMD(226, "SoftwareReset")
     ACTION_CMD(229, "EnterBootloader")
-    READ_CMD(250, "GetButtonState", U8(1))
+    READ_CMD(250, "GetButtonState", U8(1))    
 };
 
 const struct TSS_Command* tssGetCommand(uint8_t num)

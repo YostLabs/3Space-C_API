@@ -37,7 +37,7 @@ int tssWriteCommand(const struct TSS_Com_Class *com, bool header, const struct T
 
     com->out.write(&checksum, 1, com->user_data);
     TSS_COM_END_WRITE(com);
-    return 0;
+    return TSS_SUCCESS;
 }
 
 int tssReadCommand(const struct TSS_Com_Class *com, const struct TSS_Command *command, ...)
@@ -264,7 +264,7 @@ int tssGetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char
     
     key_len = strlen(key_string);
     if(key_len > TSS_MAX_CMD_LEN-2) { //-2 for room for null terminator and checksum
-        return -1; 
+        return TSS_ERR_INVALID_SIZE; 
     }
 
     checksum = 0;
@@ -278,7 +278,7 @@ int tssGetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char
     com->out.write(&checksum, 1, com->user_data);
     TSS_COM_END_WRITE(com);
 
-    return 0;
+    return TSS_SUCCESS;
 }
 
 #include <stdio.h>
@@ -288,7 +288,7 @@ int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback
     enum TSS_SettingsCallbackState cb_state;
     const char *key;
     const struct TSS_Setting *setting;
-    uint8_t len, checksum, num_read;
+    uint8_t len, checksum;
     bool end_reached;
     int err;
     
@@ -297,7 +297,6 @@ int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback
     cb_info.com = com;
 
     checksum = 0;
-    num_read = 0;
     end_reached = false;
     while(!end_reached) {
         len = com->in.read_until('\0', buffer, sizeof(buffer), com->user_data);
@@ -339,7 +338,6 @@ int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback
         else if(cb_state == TSS_SettingsCallbackStateError) {
             return TSS_ERR_GET_SETTING_CALLBACK;
         }
-        num_read++;
 
         //Read in the byte that determines if done or more to parse
         len = com->in.read(1, buffer, com->user_data);
@@ -366,11 +364,12 @@ int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback
         return TSS_ERR_CHECKSUM_MISMATCH;
     }
 
-    return num_read;
+    return TSS_SUCCESS;
 }
 
 struct GetSettingUserData {
     va_list *args;
+    uint16_t num_read;
     int result;
 };
 
@@ -386,26 +385,30 @@ static enum TSS_SettingsCallbackState getSettingsCallback(
     return TSS_SettingsCallbackStateProcessed;
 }
 
-int tssGetSettingsRead(const struct TSS_Com_Class *com, ...)
+int tssGetSettingsRead(const struct TSS_Com_Class *com, uint16_t *num_read, ...)
 {
     va_list args;
     int result;
-    va_start(args, com);
-    result = tssGetSettingsReadV(com, args);
+    va_start(args, num_read);
+    result = tssGetSettingsReadV(com, num_read, args);
     va_end(args);
 
     return result;
 }
 
-int tssGetSettingsReadV(const struct TSS_Com_Class *com, va_list args)
+int tssGetSettingsReadV(const struct TSS_Com_Class *com, uint16_t *num_read, va_list args)
 {
     int result;
     struct GetSettingUserData user_data = {
         .args = &args,
+        .num_read = 0,
         .result = TSS_SUCCESS
     };
 
     result = tssGetSettingsReadCb(com, getSettingsCallback, &user_data);
+    if(num_read != NULL) {
+        *num_read = user_data.num_read;
+    }
     return (result != TSS_ERR_GET_SETTING_CALLBACK) ? result : user_data.result;
 }
 

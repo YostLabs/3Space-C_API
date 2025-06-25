@@ -21,7 +21,7 @@
 #define THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA 2
 #define THREESPACE_UPDATE_COMMAND_NONE -1
 
-void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
+void tssCreateSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 {
     *sensor = (TSS_Sensor) {
         .com = com,
@@ -31,10 +31,10 @@ void createTssSensor(TSS_Sensor *sensor, struct TSS_Com_Class *com)
 
 //----------------------------------CORE SENSOR FUNCTIONS------------------------------------------------------
 
-static void cacheHeader(TSS_Sensor *sensor);
-static void cacheStreamSlots(TSS_Sensor *sensor);
+static int cacheHeader(TSS_Sensor *sensor);
+static int cacheStreamSlots(TSS_Sensor *sensor);
 
-static void initFirmware(TSS_Sensor *sensor);
+static int initFirmware(TSS_Sensor *sensor);
 
 //----------------------------------------ALIGNMENT & VALIDATION FUNCTIONS-----------------------------------------
 static inline void handleMisalignment(TSS_Sensor *sensor);
@@ -52,59 +52,69 @@ static int awaitSetSettingResponse(TSS_Sensor *sensor, uint16_t num_keys);
 #define peekCapacity(sensor) (sensor)->com->in.peek_capacity((sensor)->com->user_data)
 #define getTimeout(sensor) (sensor)->com->in.get_timeout((sensor)->com->user_data)
 
-void initTssSensor(TSS_Sensor *sensor) {
+int tssInitSensor(TSS_Sensor *sensor) {
+    int err;
     uint8_t in_bootloader;
+
     sensorInternalForceStopStreaming(sensor);
 
     //Clear out any garbage data
     sensor->com->in.clear_timeout(sensor->com->user_data, 5);
 
     //Check for bootloader
-    sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
+    err = sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
+    if(err != TSS_SUCCESS) return err;
     sensor->_in_bootloader = in_bootloader;
     if(!sensor->_in_bootloader) {
-        initFirmware(sensor);
+        err = initFirmware(sensor);
     }
     else {
         //Cache so if reenumerates can find when booting into firmware
-        sensorBootloaderGetSerialNumber(sensor, &sensor->serial_number);
+        err = sensorBootloaderGetSerialNumber(sensor, &sensor->serial_number);
     }
+
+    return err;
 }
 
 
-static void initFirmware(TSS_Sensor *sensor) {
+static int initFirmware(TSS_Sensor *sensor) {
     sensor->dirty = false;
     sensor->_header_enabled = true;
-    sensorUpdateCachedSettings(sensor);
+    return sensorUpdateCachedSettings(sensor);
 }
 
 //----------------------------------CACHEING FUNCTIONS-------------------------------------------
 
-static void cacheHeader(TSS_Sensor *sensor) {
+static int cacheHeader(TSS_Sensor *sensor) {
+    int err;
     uint8_t header;
-    sensorReadHeader(sensor, &header);
-    if(header == sensor->header_cfg.bitfield && (header & REQUIRED_HEADER_BITS) == REQUIRED_HEADER_BITS) return; //Nothing to update
+    err = sensorReadHeader(sensor, &header);
+    if(err) return err;
+    if(header == sensor->header_cfg.bitfield && (header & REQUIRED_HEADER_BITS) == REQUIRED_HEADER_BITS) return TSS_SUCCESS; //Nothing to update
 
     //Do not allow changing the header if currently streaming to prevent misalignment issues
     if(sensorIsStreaming(sensor)) {
-        sensorWriteHeader(sensor, sensor->header_cfg.bitfield);
-        return;
+        return sensorWriteHeader(sensor, sensor->header_cfg.bitfield);
     }
 
     //Force required bits to be enabled
     if((header & REQUIRED_HEADER_BITS) != REQUIRED_HEADER_BITS) {
         header |= REQUIRED_HEADER_BITS;
-        sensorWriteHeader(sensor, header);
+        err = sensorWriteHeader(sensor, header);
     }
     sensor->header_cfg = tssHeaderInfoFromBitfield(header);
+
+    return err;
 }
 
-static void cacheStreamSlots(TSS_Sensor *sensor) {
+static int cacheStreamSlots(TSS_Sensor *sensor) {
     char stream_slots[130];
+    int err;
     uint16_t output_size, size;
     uint8_t i;
     
-    sensorReadStreamSlots(sensor, stream_slots, sizeof(stream_slots));
+    err = sensorReadStreamSlots(sensor, stream_slots, sizeof(stream_slots));
+    if(err) return err;
     tssUtilStreamSlotStringToCommands(stream_slots, sensor->streaming.data.commands);
     
     output_size = 0;
@@ -113,43 +123,54 @@ static void cacheStreamSlots(TSS_Sensor *sensor) {
         output_size += size;
     }
     sensor->streaming.data.output_size = output_size;
+
+    return TSS_SUCCESS;
 }
 
-void sensorUpdateCachedSettings(TSS_Sensor *sensor) {
+int sensorUpdateCachedSettings(TSS_Sensor *sensor) {
+    int err;
     uint8_t value;
     
     sensor->dirty = false;
 
     //Cache the header
-    cacheHeader(sensor);
+    err = cacheHeader(sensor);
+    if(err) return err;
 
     //Cache debug mode
-    sensorReadDebugMode(sensor, &value);
+    err = sensorReadDebugMode(sensor, &value);
+    if(err) return err;
     sensor->debug._immediate = value;
 
-    cacheStreamSlots(sensor);
+    err = cacheStreamSlots(sensor);
+    if(err) return err;
 
-    sensorReadSerialNumber(sensor, &sensor->serial_number);
+    err = sensorReadSerialNumber(sensor, &sensor->serial_number);
+    if(err) return err;
 }
 
-static void checkDirty(TSS_Sensor *sensor) {
+static int checkDirty(TSS_Sensor *sensor) {
+    int err;
     uint8_t in_bootloader;
-    if(!sensor->dirty) return;
+    if(!sensor->dirty) return TSS_SUCCESS;
 
     //Ensure connected
     if(sensor->com->open(sensor->com->user_data)) {
-        //TODO: Handle Error
-        sensorReconnect(sensor, 2000); //Will cause reenumeration if enabled
+        err = sensorReconnect(sensor, 2000); //Will cause reenumeration if enabled
+        if(err) return err;
     }
     sensorInternalForceStopStreaming(sensor);
-    sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
+    err = sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
+    if(err) return err;
     sensor->_in_bootloader = in_bootloader;
     
     if(!in_bootloader) {
-        initFirmware(sensor);
+        err = initFirmware(sensor);
     }
     
     sensor->dirty = false;
+
+    return err;
 }
 
 //--------------------------------GENERIC FUNCTIONS-------------------------------------
@@ -157,7 +178,8 @@ static void checkDirty(TSS_Sensor *sensor) {
 int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunction read_func, va_list outputs)
 {
     int err_or_checksum;
-    checkDirty(sensor);
+    err_or_checksum = checkDirty(sensor);
+    if(err_or_checksum) return err_or_checksum;
     tssWriteCommand(sensor->com, sensor->_header_enabled, command, input);
     err_or_checksum = read_func(sensor, command, outputs);
     if(err_or_checksum < 0) return err_or_checksum;
@@ -191,10 +213,13 @@ int sensorInternalProcessStreamingBatch(TSS_Sensor *sensor, const struct TSS_Com
 //Common to both read setting functions
 inline static int baseReadSettings(TSS_Sensor *sensor, const char *key_string)
 {
+    int err;
     uint32_t id;
     uint16_t min_response_len;
-    checkDirty(sensor);
-    tssGetSettingsWrite(sensor->com, true, key_string);
+    err = checkDirty(sensor);
+    if(err) return err;
+    err = tssGetSettingsWrite(sensor->com, true, key_string);
+    if(err) return err;
 
     //+1 is because the terminating character/delimiter is also required in the response.
     min_response_len = (uint16_t)tssStrLenUntil(key_string, ';');
@@ -206,7 +231,8 @@ inline static int baseReadSettings(TSS_Sensor *sensor, const char *key_string)
         return TSS_ERR_RESPONSE_NOT_FOUND;
     }  
 
-    tssReadSettingsHeader(sensor->com, &id);
+    err = tssReadSettingsHeader(sensor->com, &id);
+    if(err < 0) return err;
     return TSS_SUCCESS;
 }
 
@@ -217,7 +243,7 @@ int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outp
     if(result < 0) {
         return result;
     }
-    return tssGetSettingsReadV(sensor->com, outputs);
+    return tssGetSettingsReadV(sensor->com, &sensor->last_num_settings_read, outputs);
 }
 
 int sensorReadSettingsQuery(TSS_Sensor *sensor, const char *key_string, TssGetSettingsCallback cb, void *user_data)
@@ -272,52 +298,55 @@ static const char * const K_HEADER_KEYS[] = { "header", "header_status", "header
 int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys, 
     const void **data)
 {
-    int result;
+    int err;
     uint32_t id;
     uint16_t i;
 
-    checkDirty(sensor);
+    err = checkDirty(sensor);
+    if(err) return err;
 
     //Must check for debug_mode=1 before sending the change to be able to properly handle
     //reading the response (since debug messages may be output immediately before the response happens)
     checkAndCacheDebugMode(sensor, keys, num_keys, data);
 
-    tssSetSettingsWrite(sensor->com, true, keys, num_keys, data);
+    err = tssSetSettingsWrite(sensor->com, true, keys, num_keys, data);
+    if(err) return err;
 
     if(awaitSetSettingResponse(sensor, num_keys) != THREESPACE_AWAIT_COMMAND_FOUND) {
         return TSS_ERR_RESPONSE_NOT_FOUND;
     }
 
-    tssReadSettingsHeader(sensor->com, &id);
-    result = tssSetSettingsRead(sensor->com, &sensor->last_write_setting_response);
+    err = tssReadSettingsHeader(sensor->com, &id);
+    if(err < 0) return err;
+    err = tssSetSettingsRead(sensor->com, &sensor->last_write_setting_response);
+    if(err) return err;
 
     //Check for keys that may need cacheing. This is done here to allow the user to not have
     //to manually call updateCachedSettings when using the base API. Speed is not really a concern
     //for the settings protocol either since changes should be infrequent.
 
     if(keyInArray("default", keys, num_keys) >= 0) {
-        sensorUpdateCachedSettings(sensor);
+        err = sensorUpdateCachedSettings(sensor);
     }
     else {
         //Check for header keys
         for(i = 0; i < num_keys; i++) {
             if(keyInArray(keys[i], K_HEADER_KEYS, sizeof(K_HEADER_KEYS) / sizeof(K_HEADER_KEYS[0])) >= 0) {
-                cacheHeader(sensor);
+                err = cacheHeader(sensor);
+                if(err) return err;
                 break;
             }
         }
 
         //Check for stream slots
         if(keyInArray("stream_slots", keys, num_keys) >= 0) {
-            cacheStreamSlots(sensor);
+            err = cacheStreamSlots(sensor);
+            if(err) return err;
         }
     }
-
-    if(result < 0) {
-        printf("Failed to write: %s %d\n", keys[0], result);
-    }
-
-    return result;
+    
+    if(err < 0) return err;
+    return TSS_SUCCESS;
 }
 
 int sensorUpdateStreaming(TSS_Sensor *sensor)
@@ -325,7 +354,8 @@ int sensorUpdateStreaming(TSS_Sensor *sensor)
     struct TSS_Header header;
     tss_time_t start_time;
     int result;
-    checkDirty(sensor);
+    result = checkDirty(sensor);
+    if(result != TSS_SUCCESS) return result;
     
     start_time = tssTimeGet();
     //Update until either a command is successfully parsed or not enough data for a command
@@ -627,7 +657,9 @@ static int peekCheckDebugMessage(TSS_Sensor *sensor) {
 //--------------------------------------BOOTLOADER----------------------------------------------
 int sensorBootloaderIsActive(TSS_Sensor *sensor, uint8_t *active)
 {
-    checkDirty(sensor);
+    int err;
+    err = checkDirty(sensor);
+    if(err) return err;
     *active = sensor->_in_bootloader;
     return TSS_SUCCESS;
 }

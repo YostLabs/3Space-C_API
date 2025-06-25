@@ -99,8 +99,12 @@ static int discoverReconnectCom(struct TSS_Com_Class *com, void *user_data)
     }
     com->in.set_timeout(info->com_timeout, com->user_data);
 
-    createTssSensor(info->out_sensor, com);
-    initTssSensor(info->out_sensor);
+    tssCreateSensor(info->out_sensor, com);
+    result = tssInitSensor(info->out_sensor);
+    if(result != TSS_SUCCESS) { //If just needed to retry, will retry when rediscovered.
+        return TSS_AUTO_DETECT_CONTINUE;
+    }
+
     if(info->out_sensor->serial_number == info->serial_number) {
         return TSS_AUTO_DETECT_SUCCESS;
     }
@@ -119,8 +123,12 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
         //If it doesn't reenumerate, then just ensure the port is open
         result = sensor->com->open(sensor->com->user_data);
         if(result != TSS_SUCCESS) return TSS_ERR_DETECTION;
-        initTssSensor(sensor);
-        return TSS_SUCCESS;
+        start_time = tssTimeGet();
+        do {
+            sensor->com->in.clear_immediate(sensor->com->user_data);
+            result = tssInitSensor(sensor);
+        } while(result != TSS_SUCCESS && tssTimeDiff(start_time) < timeout_ms);
+        return result;
     }
 
     //Sensor does reenumerate, so may have to find a new port. Close and search.
@@ -325,9 +333,9 @@ void sensorInternalForceStopStreaming(TSS_Sensor *sensor)
 
     //These functions return no data, so can be called regardless of if available.
     //This affectively sends these and reads nothing by having header disabled for these
-    sensorStopStreaming(sensor);
-    sensorStopStreamingFile(sensor);
-    sensorStopLogging(sensor);
+    sensorStreamingStop(sensor);
+    sensorFileStreamingStop(sensor);
+    sensorLoggingStop(sensor);
 
     sensor->_header_enabled = header_was_enabled;
     sensor->dirty = was_dirty;

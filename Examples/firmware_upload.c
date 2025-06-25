@@ -16,25 +16,27 @@ int main()
 
     //-----------------------Discover Com Port and configure-----------------------------
     struct SerialComClass ser;
-    if(serial_com_auto_detect(&ser.com, NULL, NULL) != TSS_AUTO_DETECT_SUCCESS) {
+    struct TSS_Com_Class *com;
+    com = (struct TSS_Com_Class*)&ser;
+    if(serial_com_auto_detect(com, NULL, NULL) != TSS_AUTO_DETECT_SUCCESS) {
         printf("Failed to detect sensor.\n");
     }
 
-    if(ser.com.open(&ser)) {
+    if(com->open(com->user_data)) {
         printf("Failed to open port.\r\n");
         return 1;
     }
 
     printf("Successfully opened port COM%d\r\n", ser.port.port);
-    ser.com.in.set_timeout(1000, ser.com.user_data);
-    ser.com.in.clear_timeout(ser.com.user_data, 5);
+    com->in.set_timeout(1000, com->user_data);
+    com->in.clear_timeout(com->user_data, 5);
 
     //------------------------------Create Sensor Object-------------------------------
     TSS_Sensor sensor_base;
     TSS_Sensor *sensor = &sensor_base;
     printf("Initializing sensor\n");
-    createTssSensor(sensor, &ser.com);
-    initTssSensor(sensor);
+    tssCreateSensor(sensor, com);
+    tssInitSensor(sensor);
 
     //------------------------------Enter Bootloader--------------------------------------
     uint8_t active;
@@ -57,7 +59,7 @@ int main()
     //--------------------------Open New Firmware Source---------------------------------
     FILE *fptr;
     printf("Opening firmware file.\n");
-    fptr = fopen("Examples/Application.xml", "r");
+    fptr = fopen("Examples/embedded.xml", "r");
     if(fptr == NULL) {
         printf("Failed to load firmware file...\n");
         return -1;

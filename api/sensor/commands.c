@@ -5,7 +5,7 @@
 
 //---------------------------------------CUSTOM STREAMING------------------------------------------------
 
-int sensorGetStreamingBatch(TSS_Sensor *sensor, ...) {
+int sensorStreamingGetPacket(TSS_Sensor *sensor, ...) {
     va_list outputs;
     int result;
 
@@ -15,7 +15,7 @@ int sensorGetStreamingBatch(TSS_Sensor *sensor, ...) {
     return result;
 }
 
-int sensorStartStreaming(TSS_Sensor *sensor, TssDataCallback cb) {
+int sensorStreamingStart(TSS_Sensor *sensor, TssDataCallback cb) {
     int err;
     if(cb == NULL) return TSS_ERR_INVALID_STREAM_CALLBACK;
     err = sensorInternalExecuteCommand(sensor, tssGetCommand(85), NULL);
@@ -26,14 +26,14 @@ int sensorStartStreaming(TSS_Sensor *sensor, TssDataCallback cb) {
     return err;
 }
 
-int sensorStopStreaming(TSS_Sensor *sensor) {
+int sensorStreamingStop(TSS_Sensor *sensor) {
     sensor->streaming.data.active = false;
     return sensorInternalExecuteCommand(sensor, tssGetCommand(86), NULL);
 }
 
 //-------------------------------CUSTOM FILE-------------------------------
 
-int sensorStreamFile(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size) {
+int sensorFileStreamingStart(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size) {
     int err;
     uint64_t file_len;
 
@@ -47,12 +47,12 @@ int sensorStreamFile(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size)
     return err;
 }
 
-int sensorStopStreamingFile(TSS_Sensor *sensor) {
+int sensorFileStreamingStop(TSS_Sensor *sensor) {
     sensor->streaming.file.active = false;
     return sensorInternalExecuteCommand(sensor, tssGetCommand(181), NULL);
 }
 
-int sensorReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data) {
+int sensorFileReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data) {
     //Build a version of the command with the out format set based on the incoming length
     struct TSS_Command readBytesCommand = *tssGetCommand(177);
     struct TSS_Param params[] = { TSS_PARAM(1, len), TSS_PARAM_NULL };
@@ -62,7 +62,7 @@ int sensorReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data) {
 
 //------------------------------CUSTOM LOGGING-----------------------------------
 
-int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb) {
+int sensorLoggingStart(TSS_Sensor *sensor, TssDataCallback cb) {
     int err;
     uint8_t immediate_output, status;
     err = sensorReadLogImmediateOutput(sensor, &immediate_output);
@@ -87,7 +87,7 @@ int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb) {
     if(err) return err;
     //Because we are not forcing the status bit in the header to be enabled, we check here instead
     //for success of the command.
-    err = sensorGetLoggingStatus(sensor, &status);
+    err = sensorLoggingGetStatus(sensor, &status);
     if(err) return err;
     if(status != 1) return TSS_ERR_FAILED_START_LOGGING;
 
@@ -98,7 +98,7 @@ int sensorStartLogging(TSS_Sensor *sensor, TssDataCallback cb) {
     return err;
 }
 
-int sensorStopLogging(TSS_Sensor *sensor) {
+int sensorLoggingStop(TSS_Sensor *sensor) {
     sensor->streaming.log.active = false;
     return sensorInternalExecuteCommand(sensor, tssGetCommand(61), NULL);
 }
@@ -319,11 +319,11 @@ int sensorGetCorrectedMagnetometerVectorByID(TSS_Sensor *sensor, uint8_t id, flo
     return sensorInternalExecuteCommand(sensor, tssGetCommand(56), (const void*[]) { &id }, out_mag);
 }
 
-int sensorEnableMassStorageController(TSS_Sensor *sensor) {
+int sensorMassStorageControllerEnable(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(57), NULL);
 }
 
-int sensorDisableMassStorageController(TSS_Sensor *sensor) {
+int sensorMassStorageControllerDisable(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(58), NULL);
 }
 
@@ -339,7 +339,7 @@ int sensorGetClockValues(TSS_Sensor *sensor, uint16_t *out_year, uint8_t *out_mo
     return sensorInternalExecuteCommand(sensor, tssGetCommand(63), NULL, out_year, out_month, out_day, out_hour, out_minute, out_second);
 }
 
-int sensorGetLoggingStatus(TSS_Sensor *sensor, uint8_t *out_status) {
+int sensorLoggingGetStatus(TSS_Sensor *sensor, uint8_t *out_status) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(64), NULL, out_status);
 }
 
@@ -363,26 +363,13 @@ int sensorEEPTSStop(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(69), NULL);
 }
 
-int sensorEEPTSGetOldestStep(TSS_Sensor *sensor, uint32_t *out_segment_count, uint32_t *out_timestamp, 
-    double *out_longitude, double *out_latitude, float *out_altitude, float *out_heading, 
-    float *out_distance, float *out_distance_x, float *out_distance_y, float *out_distance_z, 
-    uint8_t *out_motion, uint8_t *out_location, float *out_confidence, float *out_overall_confidence) 
-{
-    return sensorInternalExecuteCommand(sensor, tssGetCommand(70), NULL, out_segment_count, out_timestamp,
-        out_longitude, out_latitude, out_altitude, out_heading, out_distance, out_distance_x, 
-        out_distance_y, out_distance_z, out_motion, out_location, out_confidence, out_overall_confidence);
+int sensorEEPTSGetOldestStep(TSS_Sensor *sensor, uint32_t *out_segment_count, uint32_t *out_timestamp, double *out_longitude, double *out_latitude, float *out_altitude, float *out_heading, float *out_distance, float *out_distance_x, float *out_distance_y, float *out_distance_z, uint8_t *out_motion, uint8_t *out_location, float *out_confidence, float *out_overall_confidence) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(70), NULL, out_segment_count, out_timestamp, out_longitude, out_latitude, out_altitude, out_heading, out_distance, out_distance_x, out_distance_y, out_distance_z, out_motion, out_location, out_confidence, out_overall_confidence);
 }
 
-int sensorEEPTSGetNewestStep(TSS_Sensor *sensor, uint32_t *out_segment_count, uint32_t *out_timestamp, 
-    double *out_longitude, double *out_latitude, float *out_altitude, float *out_heading, 
-    float *out_distance, float *out_distance_x, float *out_distance_y, float *out_distance_z, 
-    uint8_t *out_motion, uint8_t *out_location, float *out_confidence, float *out_overall_confidence) 
-{
-    return sensorInternalExecuteCommand(sensor, tssGetCommand(71), NULL, out_segment_count, out_timestamp, 
-        out_longitude, out_latitude, out_altitude, out_heading, out_distance, out_distance_x, 
-        out_distance_y, out_distance_z, out_motion, out_location, out_confidence, out_overall_confidence);
+int sensorEEPTSGetNewestStep(TSS_Sensor *sensor, uint32_t *out_segment_count, uint32_t *out_timestamp, double *out_longitude, double *out_latitude, float *out_altitude, float *out_heading, float *out_distance, float *out_distance_x, float *out_distance_y, float *out_distance_z, uint8_t *out_motion, uint8_t *out_location, float *out_confidence, float *out_overall_confidence) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(71), NULL, out_segment_count, out_timestamp, out_longitude, out_latitude, out_altitude, out_heading, out_distance, out_distance_x, out_distance_y, out_distance_z, out_motion, out_location, out_confidence, out_overall_confidence);
 }
-
 
 int sensorEEPTSGetAvailableStepCount(TSS_Sensor *sensor, uint8_t *out_count) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(72), NULL, out_count);
@@ -396,11 +383,11 @@ int sensorEEPTSAutoOffset(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(74), NULL);
 }
 
-int sensorGetStreamingCommandLabel(TSS_Sensor *sensor, uint8_t cmd_number, char *out_label, uint32_t size) {
+int sensorStreamingGetCommandLabel(TSS_Sensor *sensor, uint8_t cmd_number, char *out_label, uint32_t size) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(83), (const void*[]) { &cmd_number }, out_label, size);
 }
 
-int sensorPauseLogStreaming(TSS_Sensor *sensor, uint8_t pause) {
+int sensorLoggingPauseStreaming(TSS_Sensor *sensor, uint8_t pause) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(87), (const void*[]) { &pause });
 }
 
@@ -452,19 +439,19 @@ int sensorGetActiveCalibrationActive(TSS_Sensor *sensor, uint8_t *out_state) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(168), NULL, out_state);
 }
 
-int sensorGetLastLiveLoggingLocation(TSS_Sensor *sensor, uint64_t *out_cursor_index, char *out_path, uint32_t size) {
+int sensorLoggingGetLastLiveLocation(TSS_Sensor *sensor, uint64_t *out_cursor_index, char *out_path, uint32_t size) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(170), NULL, out_cursor_index, out_path, size);
 }
 
-int sensorGetNextDirectoryItem(TSS_Sensor *sensor, uint8_t *out_type, char *out_name, uint32_t size, uint64_t *out_size) {
+int sensorFsGetNextDirectoryItem(TSS_Sensor *sensor, uint8_t *out_type, char *out_name, uint32_t size, uint64_t *out_size) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(171), NULL, out_type, out_name, size, out_size);
 }
 
-int sensorChangeDirectory(TSS_Sensor *sensor, const char *path) {
+int sensorFsChangeDirectory(TSS_Sensor *sensor, const char *path) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(172), (const void*[]) { path });
 }
 
-int sensorOpenFile(TSS_Sensor *sensor, const char *path) {
+int sensorFsOpenFile(TSS_Sensor *sensor, const char *path) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(173), (const void*[]) { path });
 }
 
@@ -472,51 +459,51 @@ int sensorCloseFile(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(174), NULL);
 }
 
-int sensorGetRemainingFileSize(TSS_Sensor *sensor, uint64_t *out_size) {
+int sensorFileGetRemainingSize(TSS_Sensor *sensor, uint64_t *out_size) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(175), NULL, out_size);
 }
 
-int sensorReadLine(TSS_Sensor *sensor, char *out_line, uint32_t size) {
+int sensorFileReadLine(TSS_Sensor *sensor, char *out_line, uint32_t size) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(176), NULL, out_line, size);
 }
 
-int sensorDeleteFileOrFolder(TSS_Sensor *sensor, const char *path) {
+int sensorFsDeleteFileOrFolder(TSS_Sensor *sensor, const char *path) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(178), (const void*[]) { path });
 }
 
-int sensorSetCursorIndex(TSS_Sensor *sensor, uint64_t index) {
+int sensorFileSetCursorIndex(TSS_Sensor *sensor, uint64_t index) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(179), (const void*[]) { &index });
 }
 
-int sensorGetBatteryVoltage(TSS_Sensor *sensor, float *out_voltage) {
+int sensorBatteryGetVoltage(TSS_Sensor *sensor, float *out_voltage) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(201), NULL, out_voltage);
 }
 
-int sensorGetBatteryPercent(TSS_Sensor *sensor, uint8_t *out_percent) {
+int sensorBatteryGetPercent(TSS_Sensor *sensor, uint8_t *out_percent) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(202), NULL, out_percent);
 }
 
-int sensorGetBatteryStatus(TSS_Sensor *sensor, uint8_t *out_status) {
+int sensorBatteryGetStatus(TSS_Sensor *sensor, uint8_t *out_status) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(203), NULL, out_status);
 }
 
-int sensorGetGPSLatitudeandLongitude(TSS_Sensor *sensor, double *out_latitude, double *out_longitude) {
+int sensorGPSGetLatitudeandLongitude(TSS_Sensor *sensor, double *out_latitude, double *out_longitude) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(215), NULL, out_latitude, out_longitude);
 }
 
-int sensorGetGPSAltitude(TSS_Sensor *sensor, float *out_meters) {
+int sensorGPSGetAltitude(TSS_Sensor *sensor, float *out_meters) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(216), NULL, out_meters);
 }
 
-int sensorGetGPSFixStatus(TSS_Sensor *sensor, uint8_t *out_fix) {
+int sensorGPSGetFixStatus(TSS_Sensor *sensor, uint8_t *out_fix) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(217), NULL, out_fix);
 }
 
-int sensorGetGPSHDOP(TSS_Sensor *sensor, uint8_t *out_hdop) {
+int sensorGPSGetHDOP(TSS_Sensor *sensor, uint8_t *out_hdop) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(218), NULL, out_hdop);
 }
 
-int sensorGetGPSSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites) {
+int sensorGPSGetSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(219), NULL, out_num_satellites);
 }
 

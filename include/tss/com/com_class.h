@@ -137,8 +137,4 @@ struct TSS_Com_Class {
     void *user_data;
 };
 
-static int tssComDefaultReadUntil(uint8_t value, uint8_t *out, size_t size, void *user_data);
-static void tssComDefaultClearImmediate(void *user_data);
-static void tssComDefaultClearTimeout(void *user_data, uint32_t timeout_ms);
-
 #endif /* __COM_CLASS_H__ */

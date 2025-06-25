@@ -60,8 +60,8 @@ struct TSS_GetSettingsCallbackInfo {
 typedef enum TSS_SettingsCallbackState (*TssGetSettingsCallback)(struct TSS_GetSettingsCallbackInfo info, void *user_data);
 
 TSS_API int tssGetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char *key_string);
-TSS_API int tssGetSettingsRead(const struct TSS_Com_Class *com, ...);
-TSS_API int tssGetSettingsReadV(const struct TSS_Com_Class *com, va_list args);
+TSS_API int tssGetSettingsRead(const struct TSS_Com_Class *com, uint16_t *num_read, ...);
+TSS_API int tssGetSettingsReadV(const struct TSS_Com_Class *com, uint16_t *num_read, va_list args);
 TSS_API int tssGetSettingsReadCb(const struct TSS_Com_Class *com, TssGetSettingsCallback callback, void *user_data);
 
 TSS_API int tssSetSettingsWrite(const struct TSS_Com_Class *com, bool header, const char **keys, uint8_t num_keys, const void **data);
