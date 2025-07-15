@@ -118,8 +118,7 @@ int sensorSoftwareReset(TSS_Sensor *sensor) {
 }
 
 int sensorEnterBootloader(TSS_Sensor *sensor) {
-    uint8_t active, header_was_enabled;
-    int result;
+    uint8_t header_was_enabled;
     if(sensor->_in_bootloader) return TSS_SUCCESS;
 
     header_was_enabled = sensor->_header_enabled;
@@ -389,6 +388,10 @@ int sensorStreamingGetCommandLabel(TSS_Sensor *sensor, uint8_t cmd_number, char 
 
 int sensorLoggingPauseStreaming(TSS_Sensor *sensor, uint8_t pause) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(87), (const void*[]) { &pause });
+}
+
+int sensorGetClockValuesString(TSS_Sensor *sensor, char *out_datetime, uint32_t size) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(93), NULL, out_datetime, size);
 }
 
 int sensorGetTimestamp(TSS_Sensor *sensor, uint64_t *out_timestamp) {

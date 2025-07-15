@@ -310,7 +310,7 @@ static int close(void *user_data)
 static void set_timeout(uint32_t timeout_ms, void *user_data)
 {
     struct TSS_Managed_Com_Class *com = user_data;
-    return com->child->in.set_timeout(timeout_ms, com->child->user_data);
+    com->child->in.set_timeout(timeout_ms, com->child->user_data);
 }
 
 uint32_t get_timeout(void *user_data)

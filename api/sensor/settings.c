@@ -1159,6 +1159,14 @@ int sensorReadFsMscAuto(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "fs_msc_auto", out);
 }
 
+int sensorWriteLogSlots(TSS_Sensor *sensor, const char *value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "log_slots" }, 1, (const void*[]) { value });
+}
+
+int sensorReadLogSlots(TSS_Sensor *sensor, char *out, uint32_t size) {
+    return sensorReadSettings(sensor, "log_slots", out, size);
+}
+
 int sensorWriteLogInterval(TSS_Sensor *sensor, uint64_t value) {
     return sensorWriteSettings(sensor, (const char*[]) { "log_interval" }, 1, (const void*[]) { &value });
 }

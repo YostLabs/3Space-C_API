@@ -147,6 +147,8 @@ int sensorUpdateCachedSettings(TSS_Sensor *sensor) {
 
     err = sensorReadSerialNumber(sensor, &sensor->serial_number);
     if(err) return err;
+
+    return err;
 }
 
 static int checkDirty(TSS_Sensor *sensor) {

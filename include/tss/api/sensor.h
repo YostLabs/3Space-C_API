@@ -253,6 +253,7 @@ TSS_API int sensorStreamingGetCommandLabel(TSS_Sensor *sensor, uint8_t cmd_numbe
 TSS_API int sensorStreamingGetPacket(TSS_Sensor *sensor, ...);
 TSS_API int sensorStreamingStop(TSS_Sensor *sensor);
 TSS_API int sensorLoggingPauseStreaming(TSS_Sensor *sensor, uint8_t pause);
+TSS_API int sensorGetClockValuesString(TSS_Sensor *sensor, char *out_datetime, uint32_t size);
 TSS_API int sensorGetTimestamp(TSS_Sensor *sensor, uint64_t *out_timestamp);
 TSS_API int sensorSetTimestamp(TSS_Sensor *sensor, uint64_t timestamp);
 TSS_API int sensorSetTareWithCurrentOrientation(TSS_Sensor *sensor);
@@ -556,6 +557,8 @@ TSS_API int sensorWriteFsMscEnabled(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadFsMscEnabled(TSS_Sensor *sensor, uint8_t *out);
 TSS_API int sensorWriteFsMscAuto(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadFsMscAuto(TSS_Sensor *sensor, uint8_t *out);
+TSS_API int sensorWriteLogSlots(TSS_Sensor *sensor, const char *value);
+TSS_API int sensorReadLogSlots(TSS_Sensor *sensor, char *out, uint32_t size);
 TSS_API int sensorWriteLogInterval(TSS_Sensor *sensor, uint64_t value);
 TSS_API int sensorReadLogInterval(TSS_Sensor *sensor, uint64_t *out);
 TSS_API int sensorWriteLogHz(TSS_Sensor *sensor, float value);

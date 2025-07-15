@@ -183,6 +183,8 @@ const static struct TSS_Command * const m_commands[256] = {
     ACTION_CMD(85, "StreamingStart")
     ACTION_CMD(86, "StreamingStop")
     WRITE_CMD(87, "LoggingPauseStreaming", U8(1))
+
+    READ_CMD(93, "GetClockValuesString", STRING(1))
     READ_CMD(94, "GetTimestamp", U64(1))
     WRITE_CMD(95, "SetTimestamp", U64(1))
     ACTION_CMD(96, "SetTareWithCurrentOrientation")
