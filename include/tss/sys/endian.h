@@ -8,7 +8,7 @@
 //Set endianness based on override or auto detect
 #if TSS_ENDIAN_OVERRIDE 
     #define TSS_ENDIAN_CONFIG TSS_ENDIAN_OVERRIDE
-#else
+#else //Auto detect based on build system
     #ifdef __BYTE_ORDER__
         #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
             #define TSS_ENDIAN_CONFIG TSS_ENDIAN_BIG

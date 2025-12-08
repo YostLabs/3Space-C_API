@@ -54,7 +54,9 @@
 #define TSS_ENDIAN_LITTLE 2
 #define TSS_ENDIAN_BIG 3
 
-//Set this to manually change endian build target
+//Set this to manually change endian build target.
+//It is recommended to set this to the endian type of the system
+//this will be ran on if you know ahead of time for speed improvements.
 #define TSS_ENDIAN_OVERRIDE TSS_ENDIAN_RUN_TIME
 
 #endif /* __TSS_CONFIG_H__ */
