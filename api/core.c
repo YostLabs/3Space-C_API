@@ -483,18 +483,18 @@ int tssSetSettingsRead(const struct TSS_Com_Class *com, struct TSS_Setting_Respo
 int tssReadSettingsHeader(const struct TSS_Com_Class *com, uint32_t *id) {
     int result;
     result = com->in.read(TSS_BINARY_SETTINGS_ID_SIZE, (uint8_t*)id, com->user_data);
-#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
-    swap_endianess((uint8_t*)id, TSS_BINARY_SETTINGS_ID_SIZE);
-#endif
+    if(TSS_ENDIAN_IS_BIG) {
+        tssSwapEndianess((uint8_t*)id, TSS_BINARY_SETTINGS_ID_SIZE);
+    }
     return result;
 }
 
 int tssPeekSettingsHeader(const struct TSS_Com_Class *com, uint32_t *id) {
     int result;
     result = com->in.peek(0, TSS_BINARY_SETTINGS_ID_SIZE, (uint8_t*)id, com->user_data);
-#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
-    swap_endianess((uint8_t*)id, TSS_BINARY_SETTINGS_ID_SIZE);
-#endif
+    if(TSS_ENDIAN_IS_BIG) {
+        tssSwapEndianess((uint8_t*)id, TSS_BINARY_SETTINGS_ID_SIZE);
+    }
     return result;
 }
 
@@ -599,9 +599,9 @@ int tssReadParamsVp(const struct TSS_Com_Class *com, const struct TSS_Param *cur
         }
         else {
             len = com->in.read(cur_param->count * cur_param->size, out, com->user_data);
-#if TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG
-            swap_param_endianess(out, cur_param);
-#endif
+            if(TSS_ENDIAN_IS_BIG) {
+                swap_param_endianess(out, cur_param);
+            }
             if(len != cur_param->count * cur_param->size) {
                 return -TSS_ERR_READ;
             }
