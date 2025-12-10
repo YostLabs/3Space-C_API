@@ -382,6 +382,7 @@ static enum TSS_SettingsCallbackState getSettingsCallback(
     if(user->result != TSS_SUCCESS) {
         return TSS_SettingsCallbackStateError;
     }
+    user->num_read++;
     return TSS_SettingsCallbackStateProcessed;
 }
 
