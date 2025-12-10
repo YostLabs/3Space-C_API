@@ -116,8 +116,9 @@ int main() {
     sensorReadDebugLevel(&sensor, &debug_level);
     sensorReadDebugModule(&sensor, &debug_module);
 
-    sensorWriteDebugLevel(&sensor, 0x07);
-    sensorWriteDebugModule(&sensor, 0xFFFFFFFF);
+    //For a debug message to be generated, both its level and module must be enabled.
+    sensorWriteDebugLevel(&sensor, TSS_DEBUG_LEVEL_INFO | TSS_DEBUG_LEVEL_ERROR | TSS_DEBUG_LEVEL_WARNING);
+    sensorWriteDebugModule(&sensor, 0xFFFFFFFF); //Enable all debug modules
 
     uint32_t result;
     sensorSelfTest(&sensor, &result);

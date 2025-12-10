@@ -7,7 +7,7 @@
 */
 
 #include "tss/com/serial.h"
-#include "tss/api/sensor.h"
+#include "tss/api/core.h"
 
 #include <stdio.h>
 
@@ -15,8 +15,6 @@ int main() {
     int err;
     struct SerialComClass ser;
     struct TSS_Com_Class *com;
-    
-    struct TSS_Sensor sensor;
 
     err = serial_com_auto_detect((struct TSS_Com_Class*)&ser, NULL, NULL);
     if(err != TSS_AUTO_DETECT_SUCCESS) {

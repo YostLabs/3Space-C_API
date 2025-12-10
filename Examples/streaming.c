@@ -59,7 +59,7 @@ int main() {
         accel[0], accel[1], accel[2]);
     
     //Asynchronous streaming
-    sensorWriteStreamHz(&sensor, 2000);
+    sensorWriteStreamHz(&sensor, 50);
     //sensorWriteStreamInterval(&sensor, 20000); //This is equivalent to above
 
     //Setup timing information as well.
