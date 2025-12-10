@@ -34,7 +34,7 @@
     #define TSS_ENDIAN_IS_LITTLE !TSS_ENDIAN_IS_BIG
 #else
     #define TSS_ENDIAN_IS_LITTLE (TSS_ENDIAN_CONFIG == TSS_ENDIAN_LITTLE)
-    #define TSS_ENDIAN_IS_BIG (TSS_ENDIAN_CONFIG == TSS_ENDIAN_LITTLE)
+    #define TSS_ENDIAN_IS_BIG (TSS_ENDIAN_CONFIG == TSS_ENDIAN_BIG)
 #endif
 
 #define TSS_ENDIAN_SWAP_DEVICE_TO_BIG(data, size) do { if(TSS_ENDIAN_IS_LITTLE) { tssSwapEndianess(data, size); } } while(false)
