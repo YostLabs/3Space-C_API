@@ -24,7 +24,11 @@ int main() {
     }
 
     tssCreateSensor(&sensor, com);
-    tssInitSensor(&sensor);
+    err = tssInitSensor(&sensor);
+    if(err) {
+        printf("Failed to initialize sensor: %d\n", err);
+        return -1;
+    }
 
     printf("Getting data\n");
     //Retrieve quaternion and accelerometer data

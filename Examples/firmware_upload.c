@@ -20,11 +20,12 @@ int main()
     com = (struct TSS_Com_Class*)&ser;
     if(serial_com_auto_detect(com, NULL, NULL) != TSS_AUTO_DETECT_SUCCESS) {
         printf("Failed to detect sensor.\n");
+        return -1;
     }
 
     if(com->open(com->user_data)) {
         printf("Failed to open port.\r\n");
-        return 1;
+        return -1;
     }
 
     printf("Successfully opened port COM%d\r\n", ser.port.port);
@@ -36,7 +37,10 @@ int main()
     TSS_Sensor *sensor = &sensor_base;
     printf("Initializing sensor\n");
     tssCreateSensor(sensor, com);
-    tssInitSensor(sensor);
+    err = tssInitSensor(sensor);
+    if(err) {
+        printf("Failed to initialize sensor: %d\n", err);
+    }
 
     //------------------------------Enter Bootloader--------------------------------------
     uint8_t active;
