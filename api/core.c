@@ -525,24 +525,19 @@ inline static void send_param(const struct TSS_Com_Class *com, const struct TSS_
         *checksum += raw_data[i];
     }
 
-    if(TSS_ENDIAN_IS_LITTLE) {
+    if(TSS_ENDIAN_IS_LITTLE || is_str) {
         com->out.write(raw_data, param_len, com->user_data);
     }
     else {
         //Have to send each part of the param 1 at a time because need
         //to swap endianess, but the incoming data is const, so not allowed to modify it there
         for(element = 0; element < cur_param->count; element++) {
-            if(is_str) { //Strings don't need endianess swapped
-                com->out.write(raw_data, param_len, com->user_data);
+            //Swap endianess
+            for(i = 0; i < cur_param->size; i++) {
+                conversion[i] = raw_data[cur_param->size-1-i];
             }
-            else {
-                //Swap endianess
-                for(i = 0; i < cur_param->size; i++) {
-                    conversion[i] = raw_data[cur_param->size-1-i];
-                }
 
-                com->out.write(conversion, cur_param->size, com->user_data);
-            }
+            com->out.write(conversion, cur_param->size, com->user_data);
 
             //Advance to the next element
             raw_data += cur_param->size;

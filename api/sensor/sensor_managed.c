@@ -330,7 +330,10 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
     if(keyInArray("default", keys, num_keys) >= 0) {
         err = sensorUpdateCachedSettings(sensor);
     }
-    else {
+    else if(keyInArray("stream_slots", keys, num_keys) >= 0) {
+        err = cacheStreamSlots(sensor);
+    }
+    else{
         //Check for header keys
         for(i = 0; i < num_keys; i++) {
             if(keyInArray(keys[i], K_HEADER_KEYS, sizeof(K_HEADER_KEYS) / sizeof(K_HEADER_KEYS[0])) >= 0) {
@@ -338,12 +341,6 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
                 if(err) return err;
                 break;
             }
-        }
-
-        //Check for stream slots
-        if(keyInArray("stream_slots", keys, num_keys) >= 0) {
-            err = cacheStreamSlots(sensor);
-            if(err) return err;
         }
     }
     
