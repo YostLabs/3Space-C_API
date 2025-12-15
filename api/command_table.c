@@ -453,7 +453,7 @@ static const struct TSS_Setting m_settings[] = {
     CMD_SETTING("fs_cfg_load")
     RW_SETTING("fs_msc_enabled", U8(1))
     RW_SETTING("fs_msc_auto", U8(1))
-    //These SD settings are considered deprecated, and the above names should be used instead
+    //These settings are considered deprecated and are present for backwards compatability
     CMD_SETTING("sd_cfg_load")
     RW_SETTING("sd_msc_enabled", U8(1))
     RW_SETTING("sd_msc_auto", U8(1))
