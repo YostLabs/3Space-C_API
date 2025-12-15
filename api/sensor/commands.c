@@ -144,7 +144,7 @@ int sensorEnterBootloader(TSS_Sensor *sensor) {
 
 //-------------------------------------TODO-----------------------------------------------
 
-//-----------------------------------AUTO GENERATED--------------------------------------------
+//-----------------------------------AUTO GENERATED START--------------------------------------------
 
 int sensorGetTaredOrientation(TSS_Sensor *sensor, float out_quat[4]) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(0), NULL, out_quat);
@@ -517,3 +517,5 @@ int sensorCommitSettings(TSS_Sensor *sensor) {
 int sensorGetButtonState(TSS_Sensor *sensor, uint8_t *out_state) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(250), NULL, out_state);
 }
+
+//-----------------------------------AUTO GENERATED END--------------------------------------------

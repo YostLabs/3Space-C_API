@@ -42,6 +42,7 @@
 //It is just considered a base cmd.
 
 const static struct TSS_Command * const m_commands[256] = {
+//-------------------------AUTO GENERATED COMMANDS START---------------------------------------
     READ_CMD(0, "GetTaredOrientation", FLOAT(4))
     READ_CMD(1, "GetTaredOrientationAsEulerAngles", FLOAT(3))
     READ_CMD(2, "GetTaredOrientationAsRotationMatrix", FLOAT(9))
@@ -226,6 +227,7 @@ const static struct TSS_Command * const m_commands[256] = {
     ACTION_CMD(226, "SoftwareReset")
     ACTION_CMD(229, "EnterBootloader")
     READ_CMD(250, "GetButtonState", U8(1))    
+//-------------------------AUTO GENERATED COMMANDS END---------------------------------------
 };
 
 const struct TSS_Command* tssGetCommand(uint8_t num)
@@ -268,6 +270,7 @@ void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uin
 #define AGGREGATE_SETTING(_name) SETTING_START((_name)) .out_format = (const struct TSS_Param[]){ NULL_PARAM }, SETTING_END
 
 static const struct TSS_Setting m_settings[] = {
+//-------------------------AUTO GENERATED SETTINGS START---------------------------------------
     //System
     CMD_SETTING("default")
     CMD_SETTING("commit")
@@ -484,6 +487,7 @@ static const struct TSS_Setting m_settings[] = {
     //GPS
     RW_SETTING("gps_standby", U8(1))
     RW_SETTING("gps_led", U8(1))
+//-------------------------AUTO GENERATED SETTINGS END---------------------------------------
 };
 
 int tssSettingKeyCmp(const char* key, const char* key_format)

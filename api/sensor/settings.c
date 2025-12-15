@@ -1,8 +1,11 @@
 #include "tss/api/sensor.h"
 #include "tss/sys/stdinc.h"
 
-//-----------------------------------AUTO GENERATED---------------------------------------
+//-----------------------------------AUTO GENERATED START---------------------------------------
 
+/**
+ * @brief Restores the sensor to its default settings.
+ */
 int sensorRestoreDefaultSettings(TSS_Sensor *sensor) {
     return sensorWriteSettings(sensor, (const char*[]) { "default" }, 1, NULL);
 }
@@ -1366,3 +1369,5 @@ int sensorWriteGpsLed(TSS_Sensor *sensor, uint8_t value) {
 int sensorReadGpsLed(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "gps_led", out);
 }
+
+//-----------------------------------AUTO GENERATED END---------------------------------------

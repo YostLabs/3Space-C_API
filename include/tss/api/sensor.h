@@ -143,7 +143,7 @@ TSS_API int sensorProcessFileStreamingCallbackOutput(TSS_Sensor *sensor, void *o
 
 TSS_API int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t size);
 
-//--------------------------------CUSTOM COMMAND DECLARATIONS--------------------------------------
+//--------------------------------CUSTOM COMMAND DECLARATIONS START--------------------------------------
 TSS_API int sensorStreamingStart(TSS_Sensor *sensor, TssDataCallback cb);
 TSS_API int sensorFileStreamingStart(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size);
 TSS_API int sensorLoggingStart(TSS_Sensor *sensor, TssDataCallback cb);
@@ -156,6 +156,8 @@ TSS_API int sensorLoggingStart(TSS_Sensor *sensor, TssDataCallback cb);
 /// @warning On failure, the provided sensor object is in an undefined state
 TSS_API int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms);
 TSS_API int sensorCleanup(TSS_Sensor *sensor);
+
+//--------------------------------CUSTOM COMMAND DECLARATIONS END--------------------------------------
 
 //---------------------------------BOOTLOADER COMMANDS-------------------------------------------
 struct TSS_Bootloader_Info {
@@ -175,7 +177,7 @@ TSS_API int sensorBootloaderGetStatus(TSS_Sensor *sensor, uint32_t *status);
 TSS_API int sensorBootloaderRestoreFactorySettings(TSS_Sensor *sensor);
 
 
-//-------------------------------AUTO GENERATED COMMANDS--------------------------------------------
+//-------------------------------AUTO GENERATED COMMANDS START--------------------------------------------
 TSS_API int sensorGetTaredOrientation(TSS_Sensor *sensor, float out_quat[4]);
 TSS_API int sensorGetTaredOrientationAsEulerAngles(TSS_Sensor *sensor, float out_euler[3]);
 TSS_API int sensorGetTaredOrientationAsRotationMatrix(TSS_Sensor *sensor, float out_matrix[9]);
@@ -290,7 +292,9 @@ TSS_API int sensorSoftwareReset(TSS_Sensor *sensor);
 TSS_API int sensorEnterBootloader(TSS_Sensor *sensor);
 TSS_API int sensorGetButtonState(TSS_Sensor *sensor, uint8_t *out_state);
 
-//--------------------------------------AUTO GENERATED SETTINGS-------------------------------------------
+//-------------------------------AUTO GENERATED COMMANDS END--------------------------------------------
+
+//--------------------------------AUTO GENERATED SETTINGS START-----------------------------------------
 
 TSS_API int sensorRestoreDefaultSettings(TSS_Sensor *sensor);
 TSS_API int sensorReadAllSettings(TSS_Sensor *sensor, TssGetSettingsCallback cb, void *user_data);
@@ -609,6 +613,8 @@ TSS_API int sensorWriteGpsStandby(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadGpsStandby(TSS_Sensor *sensor, uint8_t *out);
 TSS_API int sensorWriteGpsLed(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadGpsLed(TSS_Sensor *sensor, uint8_t *out);
+
+//--------------------------------AUTO GENERATED SETTINGS END-----------------------------------------
 
 #ifdef __cplusplus
 }
