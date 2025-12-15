@@ -22,12 +22,12 @@ int sensorReadSerialNumber(TSS_Sensor *sensor, uint64_t *out) {
     return sensorReadSettings(sensor, "serial_number", out);
 }
 
-int sensorWriteTimestamp(TSS_Sensor *sensor, uint64_t value) {
-    return sensorWriteSettings(sensor, (const char*[]) { "timestamp" }, 1, (const void*[]) { &value });
+int sensorWriteTimestamp(TSS_Sensor *sensor, uint64_t microseconds) {
+    return sensorWriteSettings(sensor, (const char*[]) { "timestamp" }, 1, (const void*[]) { &microseconds });
 }
 
-int sensorReadTimestamp(TSS_Sensor *sensor, uint64_t *out) {
-    return sensorReadSettings(sensor, "timestamp", out);
+int sensorReadTimestamp(TSS_Sensor *sensor, uint64_t *out_microseconds) {
+    return sensorReadSettings(sensor, "timestamp", out_microseconds);
 }
 
 int sensorWriteLedMode(TSS_Sensor *sensor, uint8_t value) {
@@ -66,51 +66,51 @@ int sensorReadHeader(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "header", out);
 }
 
-int sensorWriteHeaderStatus(TSS_Sensor *sensor, uint8_t value) {
+int sensorWriteHeaderStatusEnabled(TSS_Sensor *sensor, uint8_t value) {
     return sensorWriteSettings(sensor, (const char*[]) { "header_status" }, 1, (const void*[]) { &value });
 }
 
-int sensorReadHeaderStatus(TSS_Sensor *sensor, uint8_t *out) {
+int sensorReadHeaderStatusEnabled(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "header_status", out);
 }
 
-int sensorWriteHeaderTimestamp(TSS_Sensor *sensor, uint8_t value) {
+int sensorWriteHeaderTimestampEnabled(TSS_Sensor *sensor, uint8_t value) {
     return sensorWriteSettings(sensor, (const char*[]) { "header_timestamp" }, 1, (const void*[]) { &value });
 }
 
-int sensorReadHeaderTimestamp(TSS_Sensor *sensor, uint8_t *out) {
+int sensorReadHeaderTimestampEnabled(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "header_timestamp", out);
 }
 
-int sensorWriteHeaderEcho(TSS_Sensor *sensor, uint8_t value) {
+int sensorWriteHeaderEchoEnabled(TSS_Sensor *sensor, uint8_t value) {
     return sensorWriteSettings(sensor, (const char*[]) { "header_echo" }, 1, (const void*[]) { &value });
 }
 
-int sensorReadHeaderEcho(TSS_Sensor *sensor, uint8_t *out) {
+int sensorReadHeaderEchoEnabled(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "header_echo", out);
 }
 
-int sensorWriteHeaderChecksum(TSS_Sensor *sensor, uint8_t value) {
+int sensorWriteHeaderChecksumEnabled(TSS_Sensor *sensor, uint8_t value) {
     return sensorWriteSettings(sensor, (const char*[]) { "header_checksum" }, 1, (const void*[]) { &value });
 }
 
-int sensorReadHeaderChecksum(TSS_Sensor *sensor, uint8_t *out) {
+int sensorReadHeaderChecksumEnabled(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "header_checksum", out);
 }
 
-int sensorWriteHeaderSerial(TSS_Sensor *sensor, uint8_t value) {
+int sensorWriteHeaderSerialEnabled(TSS_Sensor *sensor, uint8_t value) {
     return sensorWriteSettings(sensor, (const char*[]) { "header_serial" }, 1, (const void*[]) { &value });
 }
 
-int sensorReadHeaderSerial(TSS_Sensor *sensor, uint8_t *out) {
+int sensorReadHeaderSerialEnabled(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "header_serial", out);
 }
 
-int sensorWriteHeaderLength(TSS_Sensor *sensor, uint8_t value) {
+int sensorWriteHeaderLengthEnabled(TSS_Sensor *sensor, uint8_t value) {
     return sensorWriteSettings(sensor, (const char*[]) { "header_length" }, 1, (const void*[]) { &value });
 }
 
-int sensorReadHeaderLength(TSS_Sensor *sensor, uint8_t *out) {
+int sensorReadHeaderLengthEnabled(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "header_length", out);
 }
 
@@ -570,6 +570,12 @@ int sensorReadUpdateRateAccel(TSS_Sensor *sensor, uint8_t id, float *out) {
     return sensorReadSettings(sensor, key, out);
 }
 
+int sensorReadNoiseProfileAccel(TSS_Sensor *sensor, uint8_t id, float *out_noise_density, float *out_variance, float *out_bandwidth, float *out_sensitivity, uint32_t *out_odr) {
+    char key[23];
+    snprintf(key, sizeof(key), "noise_profile_accel%d", id);
+    return sensorReadSettings(sensor, key, out_noise_density, out_variance, out_bandwidth, out_sensitivity, out_odr);
+}
+
 int sensorWriteCalibMatGyro(TSS_Sensor *sensor, uint8_t id, const float value[9]) {
     char key[18];
     snprintf(key, sizeof(key), "calib_mat_gyro%d", id);
@@ -654,6 +660,12 @@ int sensorReadUpdateRateGyro(TSS_Sensor *sensor, uint8_t id, float *out) {
     return sensorReadSettings(sensor, key, out);
 }
 
+int sensorReadNoiseProfileGyro(TSS_Sensor *sensor, uint8_t id, float *out_noise_density, float *out_variance, float *out_bandwidth, float *out_sensitivity, uint32_t *out_odr) {
+    char key[22];
+    snprintf(key, sizeof(key), "noise_profile_gyro%d", id);
+    return sensorReadSettings(sensor, key, out_noise_density, out_variance, out_bandwidth, out_sensitivity, out_odr);
+}
+
 int sensorWriteCalibMatMag(TSS_Sensor *sensor, uint8_t id, const float value[9]) {
     char key[17];
     snprintf(key, sizeof(key), "calib_mat_mag%d", id);
@@ -736,6 +748,12 @@ int sensorReadUpdateRateMag(TSS_Sensor *sensor, uint8_t id, float *out) {
     char key[19];
     snprintf(key, sizeof(key), "update_rate_mag%d", id);
     return sensorReadSettings(sensor, key, out);
+}
+
+int sensorReadNoiseProfileMag(TSS_Sensor *sensor, uint8_t id, float *out_noise_density, float *out_variance, float *out_bandwidth, float *out_sensitivity, uint32_t *out_odr) {
+    char key[21];
+    snprintf(key, sizeof(key), "noise_profile_mag%d", id);
+    return sensorReadSettings(sensor, key, out_noise_density, out_variance, out_bandwidth, out_sensitivity, out_odr);
 }
 
 int sensorWriteCalibBiasBaro(TSS_Sensor *sensor, uint8_t id, float value) {
@@ -1352,6 +1370,14 @@ int sensorWriteBleName(TSS_Sensor *sensor, const char *value) {
 
 int sensorReadBleName(TSS_Sensor *sensor, char *out, uint32_t size) {
     return sensorReadSettings(sensor, "ble_name", out, size);
+}
+
+int sensorReadBleConnected(TSS_Sensor *sensor, int8_t *out) {
+    return sensorReadSettings(sensor, "ble_connected", out);
+}
+
+int sensorBleDisconnect(TSS_Sensor *sensor) {
+    return sensorWriteSettings(sensor, (const char*[]) { "ble_disconnect" }, 1, NULL);
 }
 
 int sensorWriteGpsStandby(TSS_Sensor *sensor, uint8_t value) {

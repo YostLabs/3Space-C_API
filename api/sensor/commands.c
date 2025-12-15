@@ -478,6 +478,10 @@ int sensorFileSetCursorIndex(TSS_Sensor *sensor, uint64_t index) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(179), (const void*[]) { &index });
 }
 
+int sensorBatteryGetCurrent(TSS_Sensor *sensor, int16_t *out_current) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(200), NULL, out_current);
+}
+
 int sensorBatteryGetVoltage(TSS_Sensor *sensor, float *out_voltage) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(201), NULL, out_voltage);
 }
@@ -488,6 +492,10 @@ int sensorBatteryGetPercent(TSS_Sensor *sensor, uint8_t *out_percent) {
 
 int sensorBatteryGetStatus(TSS_Sensor *sensor, uint8_t *out_status) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(203), NULL, out_status);
+}
+
+int sensorGPSGetIsActive(TSS_Sensor *sensor) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(214), NULL);
 }
 
 int sensorGPSGetLatitudeandLongitude(TSS_Sensor *sensor, double *out_latitude, double *out_longitude) {
@@ -510,8 +518,16 @@ int sensorGPSGetSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(219), NULL, out_num_satellites);
 }
 
+int sensorGPSReset(TSS_Sensor *sensor, uint8_t mode) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(220), (const void*[]) { &mode });
+}
+
 int sensorCommitSettings(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(225), NULL);
+}
+
+int sensorGetCurrentLEDColor(TSS_Sensor *sensor, float out_color[3]) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(238), NULL, out_color);
 }
 
 int sensorGetButtonState(TSS_Sensor *sensor, uint8_t *out_state) {

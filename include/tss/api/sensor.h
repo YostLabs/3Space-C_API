@@ -178,6 +178,7 @@ TSS_API int sensorBootloaderRestoreFactorySettings(TSS_Sensor *sensor);
 
 
 //-------------------------------AUTO GENERATED COMMANDS START--------------------------------------------
+
 TSS_API int sensorGetTaredOrientation(TSS_Sensor *sensor, float out_quat[4]);
 TSS_API int sensorGetTaredOrientationAsEulerAngles(TSS_Sensor *sensor, float out_euler[3]);
 TSS_API int sensorGetTaredOrientationAsRotationMatrix(TSS_Sensor *sensor, float out_matrix[9]);
@@ -233,7 +234,6 @@ TSS_API int sensorGetRawAccelerometerVectorByID(TSS_Sensor *sensor, uint8_t id, 
 TSS_API int sensorGetRawMagnetometerVectorByID(TSS_Sensor *sensor, uint8_t id, float out_mag[3]);
 TSS_API int sensorEEPTSStart(TSS_Sensor *sensor);
 TSS_API int sensorEEPTSStop(TSS_Sensor *sensor);
-
 /// @brief Retrieves the oldest EEPTS output struct
 /// @param sensor 
 /// @return 
@@ -279,19 +279,22 @@ TSS_API int sensorFileReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_d
 TSS_API int sensorFsDeleteFileOrFolder(TSS_Sensor *sensor, const char *path);
 TSS_API int sensorFileSetCursorIndex(TSS_Sensor *sensor, uint64_t index);
 TSS_API int sensorFileStreamingStop(TSS_Sensor *sensor);
+TSS_API int sensorBatteryGetCurrent(TSS_Sensor *sensor, int16_t *out_current);
 TSS_API int sensorBatteryGetVoltage(TSS_Sensor *sensor, float *out_voltage);
 TSS_API int sensorBatteryGetPercent(TSS_Sensor *sensor, uint8_t *out_percent);
 TSS_API int sensorBatteryGetStatus(TSS_Sensor *sensor, uint8_t *out_status);
+TSS_API int sensorGPSGetIsActive(TSS_Sensor *sensor);
 TSS_API int sensorGPSGetLatitudeandLongitude(TSS_Sensor *sensor, double *out_latitude, double *out_longitude);
 TSS_API int sensorGPSGetAltitude(TSS_Sensor *sensor, float *out_meters);
 TSS_API int sensorGPSGetFixStatus(TSS_Sensor *sensor, uint8_t *out_fix);
 TSS_API int sensorGPSGetHDOP(TSS_Sensor *sensor, uint8_t *out_hdop);
 TSS_API int sensorGPSGetSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites);
+TSS_API int sensorGPSReset(TSS_Sensor *sensor, uint8_t mode);
 TSS_API int sensorCommitSettings(TSS_Sensor *sensor);
 TSS_API int sensorSoftwareReset(TSS_Sensor *sensor);
 TSS_API int sensorEnterBootloader(TSS_Sensor *sensor);
+TSS_API int sensorGetCurrentLEDColor(TSS_Sensor *sensor, float out_color[3]);
 TSS_API int sensorGetButtonState(TSS_Sensor *sensor, uint8_t *out_state);
-
 //-------------------------------AUTO GENERATED COMMANDS END--------------------------------------------
 
 //--------------------------------AUTO GENERATED SETTINGS START-----------------------------------------
@@ -300,8 +303,8 @@ TSS_API int sensorRestoreDefaultSettings(TSS_Sensor *sensor);
 TSS_API int sensorReadAllSettings(TSS_Sensor *sensor, TssGetSettingsCallback cb, void *user_data);
 TSS_API int sensorReadAllWritableSettings(TSS_Sensor *sensor, TssGetSettingsCallback cb, void *user_data);
 TSS_API int sensorReadSerialNumber(TSS_Sensor *sensor, uint64_t *out);
-TSS_API int sensorWriteTimestamp(TSS_Sensor *sensor, uint64_t value);
-TSS_API int sensorReadTimestamp(TSS_Sensor *sensor, uint64_t *out);
+TSS_API int sensorWriteTimestamp(TSS_Sensor *sensor, uint64_t microseconds);
+TSS_API int sensorReadTimestamp(TSS_Sensor *sensor, uint64_t *out_microseconds);
 TSS_API int sensorWriteLedMode(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadLedMode(TSS_Sensor *sensor, uint8_t *out);
 TSS_API int sensorWriteLedRgb(TSS_Sensor *sensor, const float value[3]);
@@ -311,18 +314,18 @@ TSS_API int sensorReadVersionHardware(TSS_Sensor *sensor, char *out, uint32_t si
 TSS_API int sensorReadUpdateRateSensor(TSS_Sensor *sensor, uint32_t *out);
 TSS_API int sensorWriteHeader(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadHeader(TSS_Sensor *sensor, uint8_t *out);
-TSS_API int sensorWriteHeaderStatus(TSS_Sensor *sensor, uint8_t value);
-TSS_API int sensorReadHeaderStatus(TSS_Sensor *sensor, uint8_t *out);
-TSS_API int sensorWriteHeaderTimestamp(TSS_Sensor *sensor, uint8_t value);
-TSS_API int sensorReadHeaderTimestamp(TSS_Sensor *sensor, uint8_t *out);
-TSS_API int sensorWriteHeaderEcho(TSS_Sensor *sensor, uint8_t value);
-TSS_API int sensorReadHeaderEcho(TSS_Sensor *sensor, uint8_t *out);
-TSS_API int sensorWriteHeaderChecksum(TSS_Sensor *sensor, uint8_t value);
-TSS_API int sensorReadHeaderChecksum(TSS_Sensor *sensor, uint8_t *out);
-TSS_API int sensorWriteHeaderSerial(TSS_Sensor *sensor, uint8_t value);
-TSS_API int sensorReadHeaderSerial(TSS_Sensor *sensor, uint8_t *out);
-TSS_API int sensorWriteHeaderLength(TSS_Sensor *sensor, uint8_t value);
-TSS_API int sensorReadHeaderLength(TSS_Sensor *sensor, uint8_t *out);
+TSS_API int sensorWriteHeaderStatusEnabled(TSS_Sensor *sensor, uint8_t value);
+TSS_API int sensorReadHeaderStatusEnabled(TSS_Sensor *sensor, uint8_t *out);
+TSS_API int sensorWriteHeaderTimestampEnabled(TSS_Sensor *sensor, uint8_t value);
+TSS_API int sensorReadHeaderTimestampEnabled(TSS_Sensor *sensor, uint8_t *out);
+TSS_API int sensorWriteHeaderEchoEnabled(TSS_Sensor *sensor, uint8_t value);
+TSS_API int sensorReadHeaderEchoEnabled(TSS_Sensor *sensor, uint8_t *out);
+TSS_API int sensorWriteHeaderChecksumEnabled(TSS_Sensor *sensor, uint8_t value);
+TSS_API int sensorReadHeaderChecksumEnabled(TSS_Sensor *sensor, uint8_t *out);
+TSS_API int sensorWriteHeaderSerialEnabled(TSS_Sensor *sensor, uint8_t value);
+TSS_API int sensorReadHeaderSerialEnabled(TSS_Sensor *sensor, uint8_t *out);
+TSS_API int sensorWriteHeaderLengthEnabled(TSS_Sensor *sensor, uint8_t value);
+TSS_API int sensorReadHeaderLengthEnabled(TSS_Sensor *sensor, uint8_t *out);
 TSS_API int sensorReadValidCommands(TSS_Sensor *sensor, char *out, uint32_t size);
 TSS_API int sensorWriteCpuSpeed(TSS_Sensor *sensor, uint32_t value);
 TSS_API int sensorReadCpuSpeed(TSS_Sensor *sensor, uint32_t *out);
@@ -430,6 +433,7 @@ TSS_API int sensorReadRunningAvgAccel(TSS_Sensor *sensor, uint8_t id, float *out
 TSS_API int sensorWriteOdrAccel(TSS_Sensor *sensor, uint8_t id, uint32_t value);
 TSS_API int sensorReadOdrAccel(TSS_Sensor *sensor, uint8_t id, uint32_t *out);
 TSS_API int sensorReadUpdateRateAccel(TSS_Sensor *sensor, uint8_t id, float *out);
+TSS_API int sensorReadNoiseProfileAccel(TSS_Sensor *sensor, uint8_t id, float *out_noise_density, float *out_variance, float *out_bandwidth, float *out_sensitivity, uint32_t *out_odr);
 TSS_API int sensorWriteCalibMatGyro(TSS_Sensor *sensor, uint8_t id, const float value[9]);
 TSS_API int sensorReadCalibMatGyro(TSS_Sensor *sensor, uint8_t id, float out[9]);
 TSS_API int sensorWriteCalibBiasGyro(TSS_Sensor *sensor, uint8_t id, const float value[3]);
@@ -444,6 +448,7 @@ TSS_API int sensorReadRunningAvgGyro(TSS_Sensor *sensor, uint8_t id, float *out)
 TSS_API int sensorWriteOdrGyro(TSS_Sensor *sensor, uint8_t id, uint32_t value);
 TSS_API int sensorReadOdrGyro(TSS_Sensor *sensor, uint8_t id, uint32_t *out);
 TSS_API int sensorReadUpdateRateGyro(TSS_Sensor *sensor, uint8_t id, float *out);
+TSS_API int sensorReadNoiseProfileGyro(TSS_Sensor *sensor, uint8_t id, float *out_noise_density, float *out_variance, float *out_bandwidth, float *out_sensitivity, uint32_t *out_odr);
 TSS_API int sensorWriteCalibMatMag(TSS_Sensor *sensor, uint8_t id, const float value[9]);
 TSS_API int sensorReadCalibMatMag(TSS_Sensor *sensor, uint8_t id, float out[9]);
 TSS_API int sensorWriteCalibBiasMag(TSS_Sensor *sensor, uint8_t id, const float value[3]);
@@ -458,6 +463,7 @@ TSS_API int sensorReadRunningAvgMag(TSS_Sensor *sensor, uint8_t id, float *out);
 TSS_API int sensorWriteOdrMag(TSS_Sensor *sensor, uint8_t id, uint32_t value);
 TSS_API int sensorReadOdrMag(TSS_Sensor *sensor, uint8_t id, uint32_t *out);
 TSS_API int sensorReadUpdateRateMag(TSS_Sensor *sensor, uint8_t id, float *out);
+TSS_API int sensorReadNoiseProfileMag(TSS_Sensor *sensor, uint8_t id, float *out_noise_density, float *out_variance, float *out_bandwidth, float *out_sensitivity, uint32_t *out_odr);
 TSS_API int sensorWriteCalibBiasBaro(TSS_Sensor *sensor, uint8_t id, float value);
 TSS_API int sensorReadCalibBiasBaro(TSS_Sensor *sensor, uint8_t id, float *out);
 TSS_API int sensorWriteCalibAltitudeBaro(TSS_Sensor *sensor, uint8_t id, float value);
@@ -609,11 +615,12 @@ TSS_API int sensorWriteLogImmediateOutputHeaderMode(TSS_Sensor *sensor, uint8_t 
 TSS_API int sensorReadLogImmediateOutputHeaderMode(TSS_Sensor *sensor, uint8_t *out);
 TSS_API int sensorWriteBleName(TSS_Sensor *sensor, const char *value);
 TSS_API int sensorReadBleName(TSS_Sensor *sensor, char *out, uint32_t size);
+TSS_API int sensorReadBleConnected(TSS_Sensor *sensor, int8_t *out);
+TSS_API int sensorBleDisconnect(TSS_Sensor *sensor);
 TSS_API int sensorWriteGpsStandby(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadGpsStandby(TSS_Sensor *sensor, uint8_t *out);
 TSS_API int sensorWriteGpsLed(TSS_Sensor *sensor, uint8_t value);
 TSS_API int sensorReadGpsLed(TSS_Sensor *sensor, uint8_t *out);
-
 //--------------------------------AUTO GENERATED SETTINGS END-----------------------------------------
 
 #ifdef __cplusplus

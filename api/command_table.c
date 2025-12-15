@@ -3,7 +3,7 @@
 
 #define PARAM(_count, _size) TSS_PARAM_INITIALIZER(_count, _size)
 #define NULL_PARAM TSS_PARAM_NULL_INITIALIZER
-#define DYNAMIC_TYPE NULL_PARAM
+#define DYNAMIC_TYPE(x) NULL_PARAM
 #define FLOAT(_count) PARAM(_count, 4)
 #define DOUBLE(_count) PARAM(_count, 8)
 #define U8(_count)  PARAM(_count, 1)
@@ -43,6 +43,7 @@
 
 const static struct TSS_Command * const m_commands[256] = {
 //-------------------------AUTO GENERATED COMMANDS START---------------------------------------
+
     READ_CMD(0, "GetTaredOrientation", FLOAT(4))
     READ_CMD(1, "GetTaredOrientationAsEulerAngles", FLOAT(3))
     READ_CMD(2, "GetTaredOrientationAsRotationMatrix", FLOAT(9))
@@ -63,7 +64,6 @@ const static struct TSS_Command * const m_commands[256] = {
     INPUT(U8(1))
     OUTPUT(FLOAT(1))
     CMD_END
-
 
     CMD_START(16, "GetBarometerPressureByID")
     INPUT(U8(1))
@@ -93,48 +93,40 @@ const static struct TSS_Command * const m_commands[256] = {
     OUTPUT(FLOAT(3))
     CMD_END
 
-
     CMD_START(49, "CorrectRawAccelerometerVector")
     INPUT(FLOAT(3), U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
-
 
     CMD_START(50, "CorrectRawMagnetometerVector")
     INPUT(FLOAT(3), U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
 
-
     CMD_START(51, "GetNormalizedGyroRateByID")
     INPUT(U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
-
 
     CMD_START(52, "GetNormalizedAccelerometerVectorByID")
     INPUT(U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
 
-
     CMD_START(53, "GetNormalizedMagnetometerVectorByID")
     INPUT(U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
-
 
     CMD_START(54, "GetCorrectedGyroRateByID")
     INPUT(U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
 
-
     CMD_START(55, "GetCorrectedAccelerometerVectorByID")
     INPUT(U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
-
 
     CMD_START(56, "GetCorrectedMagnetometerVectorByID")
     INPUT(U8(1))
@@ -155,12 +147,10 @@ const static struct TSS_Command * const m_commands[256] = {
     OUTPUT(FLOAT(3))
     CMD_END
 
-
     CMD_START(66, "GetRawAccelerometerVectorByID")
     INPUT(U8(1))
     OUTPUT(FLOAT(3))
     CMD_END
-
 
     CMD_START(67, "GetRawMagnetometerVectorByID")
     INPUT(U8(1))
@@ -180,11 +170,10 @@ const static struct TSS_Command * const m_commands[256] = {
     OUTPUT(STRING(1))
     CMD_END
 
-    READ_CMD(84, "StreamingGetPacket", DYNAMIC_TYPE)
+    READ_CMD(84, "StreamingGetPacket", DYNAMIC_TYPE(1))
     ACTION_CMD(85, "StreamingStart")
     ACTION_CMD(86, "StreamingStop")
     WRITE_CMD(87, "LoggingPauseStreaming", U8(1))
-
     READ_CMD(93, "GetClockValuesString", STRING(1))
     READ_CMD(94, "GetTimestamp", U64(1))
     WRITE_CMD(95, "SetTimestamp", U64(1))
@@ -208,25 +197,29 @@ const static struct TSS_Command * const m_commands[256] = {
 
     CMD_START(177, "FileReadBytes")
     INPUT(U16(1))
-    OUTPUT(DYNAMIC_TYPE)
+    OUTPUT(DYNAMIC_TYPE(1))
     CMD_END
 
     WRITE_CMD(178, "FsDeleteFileOrFolder", STRING(1))
     WRITE_CMD(179, "FileSetCursorIndex", U64(1))
     READ_CMD(180, "FileStreamingStart", U64(1))
     ACTION_CMD(181, "FileStreamingStop")
+    READ_CMD(200, "BatteryGetCurrent", S16(1))
     READ_CMD(201, "BatteryGetVoltage", FLOAT(1))
     READ_CMD(202, "BatteryGetPercent", U8(1))
     READ_CMD(203, "BatteryGetStatus", U8(1))
+    ACTION_CMD(214, "GPSGetIsActive")
     READ_CMD(215, "GPSGetLatitudeandLongitude", DOUBLE(1), DOUBLE(1))
     READ_CMD(216, "GPSGetAltitude", FLOAT(1))
     READ_CMD(217, "GPSGetFixStatus", U8(1))
     READ_CMD(218, "GPSGetHDOP", U8(1))
     READ_CMD(219, "GPSGetSatellites", U8(1))
+    WRITE_CMD(220, "GPSReset", U8(1))
     ACTION_CMD(225, "CommitSettings")
     ACTION_CMD(226, "SoftwareReset")
     ACTION_CMD(229, "EnterBootloader")
-    READ_CMD(250, "GetButtonState", U8(1))    
+    READ_CMD(238, "GetCurrentLEDColor", FLOAT(3))
+    READ_CMD(250, "GetButtonState", U8(1))
 //-------------------------AUTO GENERATED COMMANDS END---------------------------------------
 };
 
@@ -271,6 +264,7 @@ void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uin
 
 static const struct TSS_Setting m_settings[] = {
 //-------------------------AUTO GENERATED SETTINGS START---------------------------------------
+
     //System
     CMD_SETTING("default")
     CMD_SETTING("commit")
@@ -292,13 +286,11 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("header_serial", U8(1))
     RW_SETTING("header_length", U8(1))
     R_SETTING("valid_commands", STRING(1))
-
     //Power Management
     RW_SETTING("cpu_speed", U32(1))
     R_SETTING("cpu_speed_cur", U32(1))
     W_SETTING("pm_mode", U8(1))
     RW_SETTING("pm_idle_enabled", U8(1))
-
     //Streaming
     RW_SETTING("stream_slots", STRING(1))
     RW_SETTING("stream_interval", U64(1))
@@ -308,7 +300,6 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("stream_mode", U8(1))
     RW_SETTING("stream_count", U64(1))
     R_SETTING("streamable_commands", STRING(1))
-
     //Debug
     RW_SETTING("debug_level", U32(1))
     RW_SETTING("debug_module", U32(1))
@@ -316,8 +307,6 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("debug_led", U8(1))
     RW_SETTING("debug_fault", U8(1))
     RW_SETTING("debug_wdt", U8(1))
-    RW_SETTING("cat", STRING(1))
-
     //Filter
     RW_SETTING("axis_order", STRING(1))
     RW_SETTING("axis_order_c", STRING(1))
@@ -337,7 +326,6 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("filter_mref", FLOAT(3))
     W_SETTING("filter_mref_gps", DOUBLE(2))
     RW_SETTING("filter_mref_dip", FLOAT(1))
-
     //Components
     R_SETTING("valid_accels", STRING(1))
     R_SETTING("valid_gyros", STRING(1))
@@ -349,7 +337,7 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("primary_mag", STRING(1))
     RW_SETTING("primary_sensor_rfade", FLOAT(1))
     RW_SETTING("mag_bias_mode", U8(1))
-    W_SETTING("ord_all", U32(1))
+    W_SETTING("odr_all", U32(1))
     W_SETTING("odr_accel", U32(1))
     W_SETTING("odr_gyro", U32(1))
     W_SETTING("odr_mag", U32(1))
@@ -357,7 +345,6 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("accel_enabled", U8(1))
     RW_SETTING("gyro_enabled", U8(1))
     RW_SETTING("mag_enabled", U8(1))
-
     //Accel
     RW_SETTING("calib_mat_accel%d", FLOAT(9))
     RW_SETTING("calib_bias_accel%d", FLOAT(3))
@@ -367,7 +354,7 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("running_avg_accel%d", FLOAT(1))
     RW_SETTING("odr_accel%d", U32(1))
     R_SETTING("update_rate_accel%d", FLOAT(1))
-
+    R_SETTING("noise_profile_accel%d", FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), U32(1))
     //Gyro
     RW_SETTING("calib_mat_gyro%d", FLOAT(9))
     RW_SETTING("calib_bias_gyro%d", FLOAT(3))
@@ -377,7 +364,7 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("running_avg_gyro%d", FLOAT(1))
     RW_SETTING("odr_gyro%d", U32(1))
     R_SETTING("update_rate_gyro%d", FLOAT(1))
-
+    R_SETTING("noise_profile_gyro%d", FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), U32(1))
     //Mag
     RW_SETTING("calib_mat_mag%d", FLOAT(9))
     RW_SETTING("calib_bias_mag%d", FLOAT(3))
@@ -387,13 +374,12 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("running_avg_mag%d", FLOAT(1))
     RW_SETTING("odr_mag%d", U32(1))
     R_SETTING("update_rate_mag%d", FLOAT(1))
-
+    R_SETTING("noise_profile_mag%d", FLOAT(1), FLOAT(1), FLOAT(1), FLOAT(1), U32(1))
     //Baro
     RW_SETTING("calib_bias_baro%d", FLOAT(1))
     W_SETTING("calib_altitude_baro%d", FLOAT(1))
     RW_SETTING("odr_baro%d", U32(1))
     R_SETTING("update_rate_baro%d", FLOAT(1))
-
     //EEPTS
     RW_SETTING("pts_offset_quat", FLOAT(4))
     CMD_SETTING("pts_default")
@@ -438,26 +424,19 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("pts_heading_root_err_mul", FLOAT(1))
     RW_SETTING("pts_heading_consistent_bias", FLOAT(1))
     RW_SETTING("pts_strict_bias_enabled", U8(1))
-
     //Embedded
     RW_SETTING("pin_mode0", U8(1))
     RW_SETTING("pin_mode1", U8(1))
     RW_SETTING("uart_baudrate", U32(1))
     RW_SETTING("i2c_addr", U8(1))
-
     //Data Logger
     RW_SETTING("power_hold_time", FLOAT(1))
     RW_SETTING("power_hold_state", U8(1))
     RW_SETTING("power_initial_hold_state", U8(1))
-
     CMD_SETTING("fs_cfg_load")
     RW_SETTING("fs_msc_enabled", U8(1))
     RW_SETTING("fs_msc_auto", U8(1))
-    //These settings are considered deprecated and are present for backwards compatability
-    CMD_SETTING("sd_cfg_load")
-    RW_SETTING("sd_msc_enabled", U8(1))
-    RW_SETTING("sd_msc_auto", U8(1))
-
+    RW_SETTING("log_slots", STRING(1))
     RW_SETTING("log_interval", U64(1))
     RW_SETTING("log_hz", FLOAT(1))
     RW_SETTING("log_start_event", STRING(1))
@@ -480,13 +459,19 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("log_immediate_output", U8(1))
     RW_SETTING("log_immediate_output_header_enabled", U8(1))
     RW_SETTING("log_immediate_output_header_mode", U8(1))
-
     //BLE
     RW_SETTING("ble_name", STRING(1))
-
+    R_SETTING("ble_connected", S8(1))
+    CMD_SETTING("ble_disconnect")
     //GPS
     RW_SETTING("gps_standby", U8(1))
     RW_SETTING("gps_led", U8(1))
+    //DEPRECATED
+    //These settings are considered deprecated and are present for backwards compatability
+    CMD_SETTING("sd_cfg_load")
+    RW_SETTING("sd_msc_enabled", U8(1))
+    RW_SETTING("sd_msc_auto", U8(1))
+    RW_SETTING("cat", STRING(1))
 //-------------------------AUTO GENERATED SETTINGS END---------------------------------------
 };
 
