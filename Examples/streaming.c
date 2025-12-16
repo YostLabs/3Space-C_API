@@ -31,7 +31,7 @@ int main() {
 
     com = (struct TSS_Com_Class*) &ser;
 
-    if(com->open(com->user_data)) {
+    if(tss_com_open(com)) {
         printf("Failed to open port.\r\n");
         return -1;
     }
@@ -63,7 +63,7 @@ int main() {
     //sensorWriteStreamInterval(&sensor, 20000); //This is equivalent to above
 
     //Setup timing information as well.
-    sensorWriteHeaderTimestamp(&sensor, 1);
+    sensorWriteHeaderTimestampEnabled(&sensor, 1);
     sensorWriteTimestamp(&sensor, 0);
     sensorStreamingStart(&sensor, onStreamingPacket);
     tss_time_t start_time = tssTimeGet();

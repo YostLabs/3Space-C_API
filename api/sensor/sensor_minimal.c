@@ -22,7 +22,7 @@ void tssInitSensor(TSS_Sensor *sensor) {
     sensorInternalForceStopStreaming(sensor);
 
     //Clear out any garbage data
-    sensor->com->in.clear_timeout(sensor->com->user_data, 5);
+    tss_com_clear_timeout(sensor->com, 5);
 
     //Check for bootloader
     sensorInternalBootloaderCheckActive(sensor, &in_bootloader);
@@ -87,7 +87,7 @@ int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outp
 
     //Failed to read, likely left over unparsed data. Clear it out to attempt to recover
     if(result < 0) {
-        sensor->com->in.clear_immediate(sensor->com->user_data);
+        tss_com_clear_immediate(sensor->com);
     }
     return result;
 }
@@ -100,7 +100,7 @@ int sensorReadSettingsQuery(TSS_Sensor *sensor, const char *key_string, TssGetSe
 
     //Failed to read, likely left over unparsed data. Clear it out to attempt to recover
     if(result < 0) {
-        sensor->com->in.clear_immediate(sensor->com->user_data);
+        tss_com_clear_immediate(sensor->com);
     }    
     return result;
 }
@@ -133,13 +133,13 @@ int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
 
     //This first part primes the potential Automatic Uart Baudrate detection the bootloader does
     TSS_COM_BEGIN_WRITE(sensor->com);
-    sensor->com->out.write((uint8_t*)"UUU", 3, sensor->com->user_data);
+    tss_com_write(sensor->com, (uint8_t*)"UUU", 3);
     TSS_COM_END_WRITE(sensor->com);
     //Sending the ?'s as a setting causes an instant error response in firmware mode, which prevents
     //having to wait for the bootloader response to timeout to know if in bootloader or firmware
     tssGetSettingsWrite(sensor->com, true, "?");
 
-    result = sensor->com->in.read(2, (uint8_t*)response, sensor->com->user_data);
+    result = tss_com_read(sensor->com, 2, (uint8_t*)response);
     if(result != 2) {
         result = TSS_ERR_READ;
     }
@@ -158,7 +158,7 @@ int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
     }
 
     //Clear out the rest of the OK responses or rest of the Setting response
-    sensor->com->in.clear_immediate(sensor->com->user_data);
+    tss_com_clear_immediate(sensor->com);
 
     return result;
 }

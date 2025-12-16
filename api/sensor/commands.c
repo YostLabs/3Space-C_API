@@ -137,7 +137,7 @@ int sensorEnterBootloader(TSS_Sensor *sensor) {
         return TSS_ERR_NOT_IN_BOOTLOADER;
     }
 
-    sensor->com->in.clear_immediate(sensor->com->user_data);
+    tss_com_clear_immediate(sensor->com);
 
     return TSS_SUCCESS;
 }

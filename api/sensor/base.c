@@ -46,7 +46,7 @@ int sensorProcessFileStreamingCallbackOutput(TSS_Sensor *sensor, void *output, u
     if(read_len > size) {
         read_len = size;
     }
-    num_read = sensor->com->in.read(read_len, output, sensor->com->user_data);
+    num_read = tss_com_read(sensor->com, read_len, output);
     sensor->streaming.file.remaining_cur_packet_len -= num_read;
     if(num_read != read_len) {
         return TSS_ERR_READ;
@@ -66,7 +66,7 @@ int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, size_t si
     remaining_len = TSS_DEBUG_MESSAGE_MAX_SIZE - sensor->debug.bytes_read;
     read_len = (size < remaining_len) ? (uint16_t)size : remaining_len;
 
-    num_read = sensor->com->in.read_until('\n', output, read_len, sensor->com->user_data);
+    num_read = tss_com_read_until(sensor->com, '\n', (uint8_t*)output, read_len);
 
     if(num_read > 0) {
         sensor->debug.bytes_read += num_read;
@@ -93,11 +93,11 @@ static int discoverReconnectCom(struct TSS_Com_Class *com, void *user_data)
     int result;
     struct ReconnectionInfo *info;
     info = user_data;
-    result = com->open(com->user_data);
+    result = tss_com_open(com);
     if(result) { //Failed to open
         return TSS_AUTO_DETECT_CONTINUE;
     }
-    com->in.set_timeout(info->com_timeout, com->user_data);
+    tss_com_set_timeout(com, info->com_timeout);
 
     tssCreateSensor(info->out_sensor, com);
     result = tssInitSensor(info->out_sensor);
@@ -108,7 +108,7 @@ static int discoverReconnectCom(struct TSS_Com_Class *com, void *user_data)
     if(info->out_sensor->serial_number == info->serial_number) {
         return TSS_AUTO_DETECT_SUCCESS;
     }
-    com->close(com->user_data);
+    tss_com_close(com);
     return TSS_AUTO_DETECT_CONTINUE;
 }
 
@@ -119,28 +119,28 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
     tss_time_t start_time;
     int result;
 
-    if(sensor->com->reenumerate == NULL) {
+    if(!sensor->com->reenumerates) {
         //If it doesn't reenumerate, then just ensure the port is open
-        result = sensor->com->open(sensor->com->user_data);
+        result = tss_com_open(sensor->com);
         if(result != TSS_SUCCESS) return TSS_ERR_DETECTION;
         start_time = tssTimeGet();
         do {
-            sensor->com->in.clear_immediate(sensor->com->user_data);
+            tss_com_clear_immediate(sensor->com);
             result = tssInitSensor(sensor);
         } while(result != TSS_SUCCESS && tssTimeDiff(start_time) < timeout_ms);
         return result;
     }
 
     //Sensor does reenumerate, so may have to find a new port. Close and search.
-    sensor->com->close(sensor->com->user_data);
+    tss_com_close(sensor->com);
     
     info.serial_number = sensor->serial_number;
     info.out_sensor = sensor;
-    info.com_timeout = sensor->com->in.get_timeout(sensor->com->user_data);
+    info.com_timeout = tss_com_get_timeout(sensor->com);
 
     start_time = tssTimeGet();
     do {
-        result = sensor->com->reenumerate(discoverReconnectCom, &info, sensor->com->user_data);
+        result = tss_com_reenumerate(sensor->com, discoverReconnectCom, &info);
     } while(result != TSS_AUTO_DETECT_SUCCESS && tssTimeDiff(start_time) < timeout_ms);
 
     //No need to initialize the sensor once found because part of finding it involves initializing it
@@ -155,7 +155,7 @@ int sensorCleanup(TSS_Sensor *sensor)
     sensorInternalForceStopStreaming(sensor);
     //TODO: Has to work on all models before added here
     //sensorCloseFile(sensor);
-    return sensor->com->close(sensor->com->user_data);
+    return tss_com_close(sensor->com);
 }
 
 //----------------------------BOOTLOADER-----------------------------------------
@@ -170,10 +170,10 @@ int sensorBootloaderGetSerialNumber(TSS_Sensor *sensor, uint64_t *serial_number)
     int result;
 
     TSS_COM_BEGIN_WRITE(sensor->com);
-    sensor->com->out.write((uint8_t*)"Q", 1, sensor->com->user_data);
+    tss_com_write(sensor->com, (uint8_t*)"Q", 1);
     TSS_COM_END_WRITE(sensor->com);
 
-    result = sensor->com->in.read(sizeof(buf), buf, sensor->com->user_data);
+    result = tss_com_read(sensor->com, sizeof(buf), buf);
     if(result != sizeof(buf)) {
         return TSS_ERR_READ;
     }
@@ -190,7 +190,7 @@ int sensorBootloaderLoadFirmware(TSS_Sensor *sensor, uint32_t timeout_ms)
     VALIDATE_BOOTLOADER
 
     TSS_COM_BEGIN_WRITE(sensor->com);
-    sensor->com->out.write((uint8_t*)"B", 1, sensor->com->user_data);
+    tss_com_write(sensor->com, (uint8_t*)"B", 1);
     TSS_COM_END_WRITE(sensor->com);
 
     result = sensorReconnect(sensor, timeout_ms);
@@ -208,13 +208,13 @@ int sensorBootloaderEraseFirmware(TSS_Sensor *sensor, uint32_t timeout_ms)
     VALIDATE_BOOTLOADER
 
     TSS_COM_BEGIN_WRITE(sensor->com);
-    sensor->com->out.write((uint8_t*)"S", 1, sensor->com->user_data);
+    tss_com_write(sensor->com, (uint8_t*)"S", 1);
     TSS_COM_END_WRITE(sensor->com);
 
-    cached_timeout = sensor->com->in.get_timeout(sensor->com->user_data);
-    sensor->com->in.set_timeout(timeout_ms, sensor->com->user_data);
-    num_read = sensor->com->in.read(1, &response, sensor->com->user_data);
-    sensor->com->in.set_timeout(cached_timeout, sensor->com->user_data);
+    cached_timeout = tss_com_get_timeout(sensor->com);
+    tss_com_set_timeout(sensor->com, timeout_ms);
+    num_read = tss_com_read(sensor->com, 1, &response);
+    tss_com_set_timeout(sensor->com, cached_timeout);
 
     if(num_read != 1) {
         return TSS_ERR_READ;
@@ -230,10 +230,10 @@ int sensorBootloaderGetInfo(TSS_Sensor *sensor, struct TSS_Bootloader_Info *info
     VALIDATE_BOOTLOADER
 
     TSS_COM_BEGIN_WRITE(sensor->com);
-    sensor->com->out.write((uint8_t*)"I", 1, sensor->com->user_data);
+    tss_com_write(sensor->com, (uint8_t*)"I", 1);
     TSS_COM_END_WRITE(sensor->com);
 
-    result = sensor->com->in.read(sizeof(buf), buf, sensor->com->user_data);
+    result = tss_com_read(sensor->com, sizeof(buf), buf);
     if(result != sizeof(buf)) {
         return TSS_ERR_READ;
     }
@@ -270,17 +270,17 @@ int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint16_t num_byt
     TSS_ENDIAN_SWAP_DEVICE_TO_BIG(&checksum, sizeof(checksum));
 
     TSS_COM_BEGIN_WRITE(sensor->com);
-    sensor->com->out.write((uint8_t*)"C", 1, sensor->com->user_data);
-    sensor->com->out.write((uint8_t*)&num_bytes_converted, sizeof(num_bytes_converted), sensor->com->user_data);
-    sensor->com->out.write(bytes, num_bytes, sensor->com->user_data);
-    sensor->com->out.write((uint8_t*)&checksum, sizeof(checksum), sensor->com->user_data);
+    tss_com_write(sensor->com, (uint8_t*)"C", 1);
+    tss_com_write(sensor->com, (uint8_t*)&num_bytes_converted, sizeof(num_bytes_converted));
+    tss_com_write(sensor->com, bytes, num_bytes);
+    tss_com_write(sensor->com, (uint8_t*)&checksum, sizeof(checksum));
     TSS_COM_END_WRITE(sensor->com);
 
     //Wait for response
-    cached_timeout = sensor->com->in.get_timeout(sensor->com->user_data);
-    sensor->com->in.set_timeout(timeout_ms, sensor->com->user_data);
-    num_read_or_err = sensor->com->in.read(1, &result, sensor->com->user_data);
-    sensor->com->in.set_timeout(cached_timeout, sensor->com->user_data);
+    cached_timeout = tss_com_get_timeout(sensor->com);
+    tss_com_set_timeout(sensor->com, timeout_ms);
+    num_read_or_err = tss_com_read(sensor->com, 1, &result);
+    tss_com_set_timeout(sensor->com, cached_timeout);
 
     if(num_read_or_err != 1) {
         return TSS_ERR_READ;
@@ -297,17 +297,17 @@ int sensorBootloaderGetStatus(TSS_Sensor *sensor, uint32_t *status)
 
     //Sends twice because of a bug in an old version of the bootloader.
     //This will cause the fixed version to respond twice.
-    sensor->com->out.write((uint8_t*)"OO", 2, sensor->com->user_data);
+    tss_com_write(sensor->com, (uint8_t*)"OO", 2);
     TSS_COM_END_WRITE(sensor->com);
 
-    result = sensor->com->in.read(4, (uint8_t*)status, sensor->com->user_data);
+    result = tss_com_read(sensor->com, 4, (uint8_t*)status);
     if(result != 4) {
         return TSS_ERR_READ;
     }
     TSS_ENDIAN_SWAP_BIG_TO_DEVICE(status, 4);
 
     //Clearing the potential second response
-    sensor->com->in.clear_immediate(sensor->com->user_data);
+    tss_com_clear_immediate(sensor->com);
     return TSS_SUCCESS;
 }
 
@@ -317,7 +317,7 @@ int sensorBootloaderRestoreFactorySettings(TSS_Sensor *sensor)
 
     VALIDATE_BOOTLOADER
     TSS_COM_BEGIN_WRITE(sensor->com);
-    result = sensor->com->out.write((uint8_t*)"RR", 2, sensor->com->user_data);
+    result = tss_com_write(sensor->com, (uint8_t*)"RR", 2);
     TSS_COM_END_WRITE(sensor->com);
     return result;
 }
@@ -428,7 +428,7 @@ int sensorInternalUpdateLogStreaming(TSS_Sensor *sensor) {
     enum TSS_DataCallbackState state = sensor->streaming.log.cb(sensor);
     if(state == TSS_DataCallbackStateIgnored) {
 #if TSS_MINIMAL_SENSOR
-        sensor->com->in.clear_immediate(sensor->com);
+        tss_com_clear_immediate(sensor->com);
 #else
         tssReadBytesChecksumOnly(sensor->com, sensor->last_header.length, NULL);
 #endif

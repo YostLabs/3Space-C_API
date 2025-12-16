@@ -4,17 +4,39 @@
 
 #include <stdbool.h>
 
-static int open(void *user_data);
-static int close(void *user_data);
+static int open(struct TSS_Com_Class *com);
+static int close(struct TSS_Com_Class *com);
 
-static int read(size_t num_bytes, uint8_t *out, void *user_data);
+static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out);
 
-static void set_timeout(uint32_t timeout_ms, void *user_data);
-uint32_t get_timeout(void *user_data);
+static void set_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms);
+uint32_t get_timeout(struct TSS_Com_Class *com);
 
-static int write(const uint8_t *bytes, size_t len, void *user_data);
+static int write(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len);
 
-static int reenumerate(TssComAutoDetectCallback cb, void *detect_data, void *user_data);
+static int reenumerate(struct TSS_Com_Class *com, TssComAutoDetectCallback cb, void *detect_data);
+
+const static struct TSS_Com_Class_API m_serial_com_api = {
+    .open = open,
+    .close = close,
+
+    .reenumerate = reenumerate,
+    .auto_detect = serial_com_auto_detect,
+
+    .in = {
+        .read = read,
+        .read_until = tssManagedComBaseReadUntil,
+
+        .set_timeout = set_timeout,
+        .get_timeout = get_timeout,
+
+        .clear_immediate = tssManagedComBaseClear,
+        .clear_timeout = tssManagedComBaseClearTimeout
+    },
+    .out = {
+        .write = write
+    },
+};
 
 void create_serial_com_class(uint8_t port, struct SerialComClass *out)
 {
@@ -23,70 +45,55 @@ void create_serial_com_class(uint8_t port, struct SerialComClass *out)
             .port = port,
         },
         .serial_com = (struct TSS_Com_Class) {
-            .user_data = out,
-            
-            .open = open,
-            .close = close,
-
-            .reenumerate = reenumerate,
-            .auto_detect = serial_com_auto_detect,
-            
-            .in = {
-                .read = read,
-
-                .set_timeout = set_timeout,
-                .get_timeout = get_timeout,
-            },
-            .out = {
-                .write = write
-            },
+            .api = &m_serial_com_api,
+            .reenumerates = true,
         },
     };
 
     //Wrap it in the default functions
-    tssCreateManagedCom(&out->serial_com, out->read_buffer, sizeof(out->read_buffer), out->write_buffer, sizeof(out->write_buffer), &out->base);
+    tssCreateManagedCom(&out->serial_com, (struct TSS_Com_Class*)out, out->read_buffer, sizeof(out->read_buffer), out->write_buffer, sizeof(out->write_buffer), &out->base);
 }
 
-static int write(const uint8_t *bytes, size_t len, void *user_data)
+static int write(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len)
 {
-    struct SerialComClass *com = user_data;
-    serWrite(&com->port, (char*)bytes, len);
+    struct SerialComClass *self = (struct SerialComClass *)com;
+    serWrite(&self->port, (char*)bytes, len);
     return 0;
 }
 
-static int open(void *user_data)
+static int open(struct TSS_Com_Class *com)
 {
-    struct SerialComClass *com = user_data;
-    int result = serOpen(com->port.port, 115200, &com->port);
+    struct SerialComClass *self = (struct SerialComClass *)com;
+    int result = serOpen(self->port.port, 115200, &self->port);
     if(result) return result;
-    serConfigBufferSize(&com->port, 4096, 64);
+    serConfigBufferSize(&self->port, 4096, 64);
     return 0;
 }
 
-static int close(void *user_data)
+static int close(struct TSS_Com_Class *com)
 {
-    struct SerialComClass *com = user_data;
-    serClose(&com->port);
+    struct SerialComClass *self = (struct SerialComClass *)com;
+    serClose(&self->port);
 
     return 0;
 }
 
-static int read(size_t num_bytes, uint8_t *out, void *user_data)
+static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out)
 {
-    struct SerialComClass *com = user_data;
-    return serRead(&com->port, (char*)out, num_bytes);
+    struct SerialComClass *self = (struct SerialComClass *)com;
+    return serRead(&self->port, (char*)out, num_bytes);
 }
 
-static void set_timeout(uint32_t timeout_ms, void *user_data)
+static void set_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
 {
-    struct SerialComClass *com = user_data;
-    serSetTimeout(&com->port, timeout_ms);
+    struct SerialComClass *self = (struct SerialComClass *)com;
+    serSetTimeout(&self->port, timeout_ms);
 }
 
-uint32_t get_timeout(void *user_data)
+uint32_t get_timeout(struct TSS_Com_Class *com)
 {
-    struct SerialComClass *com = user_data;
-    return com->port.timeout;
+    struct SerialComClass *self = (struct SerialComClass *)com;
+    return self->port.timeout;
 }
 
 struct PortEnumerate {
@@ -135,8 +142,7 @@ int serial_com_auto_detect(struct TSS_Com_Class *out, TssComAutoDetectCallback c
     return params.result;
 }
 
-static int reenumerate(TssComAutoDetectCallback cb, void *detect_data, void *user_data)
+static int reenumerate(struct TSS_Com_Class *com, TssComAutoDetectCallback cb, void *detect_data)
 {
-    struct SerialComClass *com = user_data;
-    return serial_com_auto_detect((struct TSS_Com_Class*)com, cb, detect_data);
+    return serial_com_auto_detect(com, cb, detect_data);
 }

@@ -24,7 +24,7 @@ int main() {
 
     com = (struct TSS_Com_Class*) &ser;
 
-    if(com->open(com->user_data)) {
+    if(tss_com_open(com)) {
         printf("Failed to open port.\r\n");
         return -1;
     }

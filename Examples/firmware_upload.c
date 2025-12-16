@@ -23,14 +23,14 @@ int main()
         return -1;
     }
 
-    if(com->open(com->user_data)) {
+    if(tss_com_open(com)) {
         printf("Failed to open port.\r\n");
         return -1;
     }
 
     printf("Successfully opened port COM%d\r\n", ser.port.port);
-    com->in.set_timeout(1000, com->user_data);
-    com->in.clear_timeout(com->user_data, 5);
+    tss_com_set_timeout(com, 1000);
+    tss_com_clear_timeout(com, 5);
 
     //------------------------------Create Sensor Object-------------------------------
     TSS_Sensor sensor_base;

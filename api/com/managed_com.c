@@ -2,44 +2,71 @@
 #include "tss/errors.h"
 #include "tss/sys/time.h"
 
-static int open(void *user_data);
-static int close(void *user_data);
+static int open(struct TSS_Com_Class *com);
+static int close(struct TSS_Com_Class *com);
 
-static int read(size_t num_bytes, uint8_t *out, void *user_data);
-static int peek(size_t start, size_t num_bytes, uint8_t *out, void *user_data);
+static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out);
+static int peek(struct TSS_Com_Class *com, size_t start, size_t num_bytes, uint8_t *out);
 
-static int read_until(uint8_t value, uint8_t *out, size_t size, void *user_data);
-static int peek_until(size_t start, uint8_t value, uint8_t *out, size_t size, void *user_data);
+static int read_until(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size);
+static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, uint8_t *out, size_t size);
 
-static size_t length(void *user_data);  
-static size_t peek_capacity(void *user_data);
-static void set_timeout(uint32_t timeout_ms, void *user_data);
-uint32_t get_timeout(void *user_data);
-static void clear_immediate(void *user_data);
-static void clear_timeout(void *user_data, uint32_t timeout_ms);
+static size_t length(struct TSS_Com_Class *com);  
+static size_t peek_capacity(struct TSS_Com_Class *com);
+static void set_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms);
+static uint32_t get_timeout(struct TSS_Com_Class *com);
+static void clear_immediate(struct TSS_Com_Class *com);
+static void clear_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms);
 
-static int write(const uint8_t *bytes, size_t len, void *user_data);
+static int write(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len);
 
 #if TSS_BUFFERED_WRITES
-static int begin_write(void *user_data);
-static int end_write(void *user_data);
+static int begin_write(struct TSS_Com_Class *com);
+static int end_write(struct TSS_Com_Class *com);
 #endif
 
-static int reenumerate(TssComAutoDetectCallback cb, void *detect_data, void *user_data);
+static int reenumerate(struct TSS_Com_Class *com, TssComAutoDetectCallback cb, void *detect_data);
+static int auto_detect(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *detect_data);
 
-int tssCreateManagedCom(struct TSS_Com_Class *child, uint8_t *read_buf, size_t read_size, 
-    uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out)
+struct TSS_Com_Class_API m_tss_manage_com_api = {
+    .open = open,
+    .close = close,
+    .reenumerate = reenumerate,
+    .auto_detect = auto_detect,    
+    .in = {
+        .set_timeout = set_timeout,
+        .get_timeout = get_timeout,
+        .clear_immediate = clear_immediate,
+        .clear_timeout = clear_timeout,
+        .read = read,
+        .read_until = read_until,
+#if !(TSS_MINIMAL_SENSOR)
+        .peek = peek,
+        .peek_until = peek_until,
+        .peek_capacity = peek_capacity,
+        .length = length
+#endif
+    },
+    .out = {
+        .write = write,
+#if TSS_BUFFERED_WRITES                
+        .begin_write = begin_write,
+        .end_write = end_write
+#endif
+    }
+};
+
+int tssCreateManagedCom(struct TSS_Com_Class *child, struct TSS_Com_Class *child_container, 
+    uint8_t *read_buf, size_t read_size, uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out)
 {
     if(!TSS_RING_POW_2(read_size)) {
         return TSS_ERR_INVALID_SIZE;
     }
 
-    //Add any missing functions to the child com class.
-    tssManagedComAddDefaults(child);
-
     *out = (struct TSS_Managed_Com_Class) {
         //Attributes
         .child = child,
+        .child_container = child_container,
         .read_ring = {
             .capacity = read_size,
             .data = read_buf
@@ -49,77 +76,44 @@ int tssCreateManagedCom(struct TSS_Com_Class *child, uint8_t *read_buf, size_t r
 
         //Functions
         .base = {
-            .open = open,
-            .close = close,
-            .reenumerate = (child->reenumerate) ? reenumerate : NULL,
-            .auto_detect = (child->auto_detect) ? child->auto_detect : NULL,
-            .user_data = out,
-            .in = {
-                .set_timeout = set_timeout,
-                .get_timeout = get_timeout,
-                .clear_immediate = clear_immediate,
-                .clear_timeout = clear_timeout,
-                .read = read,
-                .read_until = read_until,
-#if !(TSS_MINIMAL_SENSOR)
-                .peek = peek,
-                .peek_until = peek_until,
-                .peek_capacity = peek_capacity,
-                .length = length
-#endif
-            },
-            .out = {
-                .write = write,
-#if TSS_BUFFERED_WRITES                
-                .begin_write = begin_write,
-                .end_write = end_write
-#endif
-            }
+            .api = &m_tss_manage_com_api,
+            .reenumerates = child->reenumerates,
         }
     };
 
     return TSS_SUCCESS;
 }
 
-void tssManagedComAddDefaults(struct TSS_Com_Class *com)
+int tssCreateManagedComDynamic(struct TSS_Com_Class *child, uint8_t *read_buf, size_t read_size, 
+    uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out)
 {
-    if(com->in.read_until == NULL) {
-        com->in.read_until = tssManagedComBaseReadUntil;
-    }
-
-    if(com->in.clear_immediate == NULL) {
-        com->in.clear_immediate = tssManagedComBaseClear;
-    }
-
-    if(com->in.clear_timeout == NULL) {
-        com->in.clear_timeout = tssManagedComBaseClearTimeout;
-    }
+    return tssCreateManagedCom(child, child, read_buf, read_size, write_buf, write_size, out);
 }
 
 //--------------------------CUSTOM WRITE BEHAVIOR----------------------------------
 #if TSS_BUFFERED_WRITES
-static int begin_write(void *user_data)
+static int begin_write(struct TSS_Com_Class *com)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    com->write_buffer_index = 0;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    self->write_buffer_index = 0;
     return TSS_SUCCESS;
 }
 
-static int end_write(void *user_data)
+static int end_write(struct TSS_Com_Class *com)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    return com->child->out.write(com->write_buffer, com->write_buffer_index, com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    return self->child->api->out.write(self->child_container, self->write_buffer, self->write_buffer_index);
 }
 #endif
 
-static int write(const uint8_t *bytes, size_t len, void *user_data)
+static int write(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
 #if TSS_BUFFERED_WRITES
     uint32_t i = 0;
     while(i < len) {
-        while(com->write_buffer_index < com->write_buffer_size && i < len) {
-            com->write_buffer[com->write_buffer_index++] = bytes[i++];
+        while(self->write_buffer_index < self->write_buffer_size && i < len) {
+            self->write_buffer[self->write_buffer_index++] = bytes[i++];
         }
         
         //Previous loop ended because buffer would overflow, 
@@ -130,35 +124,35 @@ static int write(const uint8_t *bytes, size_t len, void *user_data)
         }
     }
 
-    return com->write_buffer_index >= com->write_buffer_size;
+    return self->write_buffer_index >= self->write_buffer_size;
 #else
-    return com->child->out.write(bytes, len, com->child->user_data);
+    return self->child->api->out.write(self->child_container, bytes, len);
 #endif    
 }
 
 #if !(TSS_MINIMAL_SENSOR)
 //--------------------------CUSTOM READ BEHAVIOR----------------------------------
-static int read(size_t num_bytes, uint8_t *out, void *user_data)
+static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
     size_t peek_len, i;
-    peek_len = ring_size(&com->read_ring);
+    peek_len = ring_size(&self->read_ring);
     for(i = 0; i < peek_len && i < num_bytes; i++) {
-        out[i] = ring_pop(&com->read_ring);
+        out[i] = ring_pop(&self->read_ring);
     }
 
-    return i + com->child->in.read(num_bytes - i, out + i, com->child->user_data);   
+    return i + self->child->api->in.read(self->child_container, num_bytes - i, out + i);   
 }
 
-static int read_until(uint8_t value, uint8_t *out, size_t size, void *user_data)
+static int read_until(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
     size_t peek_len, num_read;
 
-    peek_len = ring_size(&com->read_ring);
+    peek_len = ring_size(&self->read_ring);
     num_read = 0;
     while(num_read < peek_len && num_read < size) {
-        *out = ring_pop(&com->read_ring);
+        *out = ring_pop(&self->read_ring);
         num_read++;
         if(*out == value) {
             return num_read;
@@ -166,38 +160,38 @@ static int read_until(uint8_t value, uint8_t *out, size_t size, void *user_data)
         out++;
     }
 
-    num_read += com->child->in.read_until(value, out, size - num_read, com->child->user_data);
+    num_read += self->child->api->in.read_until(self->child_container, value, out, size - num_read);
     return num_read;  
 }
 
-static int peek(size_t start, size_t num_bytes, uint8_t *out, void *user_data)
+static int peek(struct TSS_Com_Class *com, size_t start, size_t num_bytes, uint8_t *out)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
     size_t required_length, len, i;
     tss_time_t start_time;
     uint32_t timeout;
 
     required_length = start + num_bytes;
 
-    if(required_length > com->read_ring.capacity) {
+    if(required_length > self->read_ring.capacity) {
         return TSS_ERR_INSUFFICIENT_BUFFER;
     }
 
-    timeout = com->child->in.get_timeout(com->child->user_data);
+    timeout = self->child->api->in.get_timeout(self->child_container);
     start_time = tssTimeGet();
     while((len = length(com)) < required_length && tssTimeDiff(start_time) < timeout);
 
     //Read out as much as can
     for(i = 0; i < num_bytes && i + start < len; i++) {
-        out[i] = ring_read(&com->read_ring, i + start);
+        out[i] = ring_read(&self->read_ring, i + start);
     }
 
     return i;
 }
 
-static int peek_until(size_t start, uint8_t value, uint8_t *out, size_t size, void *user_data)
+static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, uint8_t *out, size_t size)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
     size_t num_read, len;
     tss_time_t start_time;
     uint32_t timeout;
@@ -205,12 +199,12 @@ static int peek_until(size_t start, uint8_t value, uint8_t *out, size_t size, vo
 
     num_read = 0;
     done = false;
-    timeout = com->child->in.get_timeout(com->child->user_data);
+    timeout = self->child->api->in.get_timeout(self->child_container);
     start_time = tssTimeGet();
-    while(!done && num_read < size && num_read + start < com->read_ring.capacity && tssTimeDiff(start_time) < timeout) {
+    while(!done && num_read < size && num_read + start < self->read_ring.capacity && tssTimeDiff(start_time) < timeout) {
         len = length(com);
         while(num_read + start < len) {
-            *out = ring_read(&com->read_ring, num_read + start);
+            *out = ring_read(&self->read_ring, num_read + start);
             num_read++;
             if(*out == value) {
                 done = true;
@@ -221,7 +215,7 @@ static int peek_until(size_t start, uint8_t value, uint8_t *out, size_t size, vo
     }
 
     //Stopped reading because can't peek further, not because no room to fill.
-    if(!done && num_read < size && num_read + start == com->read_ring.capacity) {
+    if(!done && num_read < size && num_read + start == self->read_ring.capacity) {
         return TSS_ERR_INSUFFICIENT_BUFFER;
     }
 
@@ -237,15 +231,15 @@ inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
     if(space == 0) return;
 
     //Need to do immediate reads, so cache the timeout and set to instant
-    timeout = com->child->in.get_timeout(com->child->user_data);
-    com->child->in.set_timeout(0, com->child->user_data);
+    timeout = com->child->api->in.get_timeout(com->child_container);
+    com->child->api->in.set_timeout(com->child_container, 0);
 
     //Read filling write index up to either capacity or the read index.
     start_index = ring_index(&com->read_ring, com->read_ring.w_index);
     start_len = com->read_ring.capacity - start_index;
     if(space < start_len) start_len = space; //Can't reach the end, the read index is in front of it
 
-    read_len = com->child->in.read(start_len, com->read_ring.data + start_index, com->child->user_data);
+    read_len = com->child->api->in.read(com->child_container, start_len, com->read_ring.data + start_index);
     
     //Update state variables
     com->read_ring.w_index += read_len;
@@ -256,81 +250,81 @@ inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
         //Read filling start of buffer up to the read index.
         //More to read possibly, fill from the start of the buffer now
         end_index = ring_index(&com->read_ring, com->read_ring.r_index);
-        read_len = com->child->in.read(end_index, com->read_ring.data, com->child->user_data);
+        read_len = com->child->api->in.read(com->child_container, end_index, com->read_ring.data);
 
         com->read_ring.w_index += read_len;
     }
 
     //Restore timeout
-    com->child->in.set_timeout(timeout, com->child->user_data);
+    com->child->api->in.set_timeout(com->child_container, timeout);
 }
 
-static size_t length(void *user_data)
+static size_t length(struct TSS_Com_Class *com)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    fill_in_buffer(com);
-    return ring_size(&com->read_ring);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    fill_in_buffer(self);
+    return ring_size(&self->read_ring);
 }
 
-static size_t peek_capacity(void *user_data)
+static size_t peek_capacity(struct TSS_Com_Class *com)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    return com->read_ring.capacity;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    return self->read_ring.capacity;
 }
 #else
 //---------------------------Just basic wrapping-------------------------
-static int read(size_t num_bytes, uint8_t *out, void *user_data)
+static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    return com->child->in.read(num_bytes, out, com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    return self->child->api->in.read(self->child_container, num_bytes, out);
 }
-static int read_until(uint8_t value, uint8_t *out, size_t size, void *user_data)
+static int read_until(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    return com->child->in.read_until(value, out, size, com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    return self->child->api->in.read_until(self->child_container, value, out, size);
 }
 #endif
 
 //--------------------------DIRECT WRAPPING-------------------------------
 
-static int open(void *user_data)
+static int open(struct TSS_Com_Class *com)
 { 
-    struct TSS_Managed_Com_Class *com = user_data;
-    return com->child->open(com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    return self->child->api->open(self->child_container);
 }
 
-static int close(void *user_data)
+static int close(struct TSS_Com_Class *com)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    com->write_buffer_index = 0;
-    ring_clear(&com->read_ring);
-    return com->child->close(com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    self->write_buffer_index = 0;
+    ring_clear(&self->read_ring);
+    return self->child->api->close(self->child_container);
 }
 
-static void set_timeout(uint32_t timeout_ms, void *user_data)
+static void set_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    com->child->in.set_timeout(timeout_ms, com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    self->child->api->in.set_timeout(self->child_container, timeout_ms);
 }
 
-uint32_t get_timeout(void *user_data)
+static uint32_t get_timeout(struct TSS_Com_Class *com)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    return com->child->in.get_timeout(com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    return self->child->api->in.get_timeout(self->child_container);
 }
 
-static void clear_immediate(void *user_data)
+static void clear_immediate(struct TSS_Com_Class *com)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    ring_clear(&com->read_ring);
-    com->child->in.clear_immediate(com->child->user_data);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    ring_clear(&self->read_ring);
+    self->child->api->in.clear_immediate(self->child_container);
 }
 
-static void clear_timeout(void *user_data, uint32_t timeout_ms)
+static void clear_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
-    ring_clear(&com->read_ring);
-    com->child->in.clear_timeout(com->child->user_data, timeout_ms);
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
+    ring_clear(&self->read_ring);
+    self->child->api->in.clear_timeout(self->child_container, timeout_ms);
 }
 
 //--------------------------------------DISCOVERY---------------------------------------------
@@ -349,46 +343,57 @@ static int reenumerate_callback(struct TSS_Com_Class *com, void *user_data)
 
     struct TSS_Managed_Com_Class *managed = info->self;
     if(&managed->base != com) {
-        //In the case where the TSS_Managed_Com_Class is included in the struct of the child com class
+        //This gets entered if the TSS_Managed_Com_Class is not included in the struct of the child com class
+        //and therefore we need to wrap the child class with the managed class before sending it to the callback.
+
+        //In the case where the TSS_Managed_Com_Class is included in the struct of the child com class,
         //we don't want to wrap the managed class with itself. The child class reenumerate should have already handled the wrapping
         //and therefore this should only be done if com != managed
-        tssCreateManagedCom(com, managed->read_ring.data, managed->read_ring.capacity, managed->write_buffer, managed->write_buffer_size, managed);
+        tssCreateManagedComDynamic(com, managed->read_ring.data, managed->read_ring.capacity, managed->write_buffer, managed->write_buffer_size, managed);
     }
 
     return info->cb(&managed->base, info->detect_data);
 }
 
-static int reenumerate(TssComAutoDetectCallback cb, void *detect_data, void *user_data)
+static int reenumerate(struct TSS_Com_Class *com, TssComAutoDetectCallback cb, void *detect_data)
 {
-    struct TSS_Managed_Com_Class *com = user_data;
+    struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
 
     struct PortEnumerate info = {
-        .self = user_data,
+        .self = self,
         .cb = cb,
         .detect_data = detect_data
     };
 
     //Detect based on the actual child type since this is just a wrapper
-    return com->child->reenumerate(reenumerate_callback, &info, com->child->user_data);
+    return self->child->api->reenumerate(self->child_container, reenumerate_callback, &info);
+}
+
+static int auto_detect(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *detect_data)
+{
+    struct TSS_Managed_Com_Class *com = (struct TSS_Managed_Com_Class *)out;
+    if(com->child->api->auto_detect == NULL) {
+        return TSS_ERR_UNIMPLEMENTED_DETECTION;
+    }
+    return com->child->api->auto_detect(com->child_container, cb, detect_data);
 }
 
 //------------------------------------BASE FUNCTION VERSIONS--------------------------------------
 
-int tssManagedComBaseReadUntil(uint8_t value, uint8_t *out, size_t size, void *com_class)
+int tssManagedComBaseReadUntil(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size)
 {
-    struct TSS_Com_Class *com = com_class;
     size_t num_read;
     tss_time_t start_time;
     uint32_t timeout;
 
-    timeout = get_timeout(com);
+    timeout = tss_com_get_timeout(com);
     start_time = tssTimeGet();
     num_read = 0;
 
     //Want to be able to poll instantly, will change back after
-    com->in.set_timeout(0, com->user_data);
+    tss_com_set_timeout(com, 0);
     while(num_read < size && tssTimeDiff(start_time) < timeout) {
-        if(com->in.read(1, out, com->user_data)) {
+        if(tss_com_read(com, 1, out)) {
             num_read++;
             if(*out == value) {
                 break;
@@ -398,43 +403,41 @@ int tssManagedComBaseReadUntil(uint8_t value, uint8_t *out, size_t size, void *c
     }
 
     //Restore timeout back to what it was
-    com->in.set_timeout(timeout, com->user_data);
+    tss_com_set_timeout(com, timeout);
     return num_read;
 }
 
-void tssManagedComBaseClear(void *com_class)
+void tssManagedComBaseClear(struct TSS_Com_Class *com)
 {
-    struct TSS_Com_Class *com = com_class;
-    int8_t buffer[40];
+    uint8_t buffer[40];
     uint32_t timeout;
     uint8_t len;
 
-    timeout = com->in.get_timeout(com->user_data);
-    com->in.set_timeout(0, com->user_data);
+    timeout = tss_com_get_timeout(com);
+    tss_com_set_timeout(com, 0);
     do {
-        len = com->in.read(sizeof(buffer), buffer, com->user_data);
+        len = tss_com_read(com, sizeof(buffer), buffer);
     } while(len > 0);  
-    com->in.set_timeout(timeout, com->user_data);
+    tss_com_set_timeout(com, timeout);
 }
 
-void tssManagedComBaseClearTimeout(void *com_class, uint32_t timeout_ms)
+void tssManagedComBaseClearTimeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
 {
-    struct TSS_Com_Class *com = com_class;
     uint8_t len, buffer[40];
     tss_time_t start, interval_start;
     uint32_t cached_timeout;
 
-    cached_timeout = com->in.get_timeout(com->user_data);
-    com->in.set_timeout(0, com->user_data);
+    cached_timeout = tss_com_get_timeout(com);
+    tss_com_set_timeout(com, 0);
 
     start = tssTimeGet();
     interval_start = start;
     do {
-        len = com->in.read(sizeof(buffer), buffer, com->user_data);
+        len = tss_com_read(com, sizeof(buffer), buffer);
         if(len > 0) {
             interval_start = tssTimeGet();
         } 
     } while(tssTimeDiff(interval_start) < timeout_ms && tssTimeDiff(start) < cached_timeout);
 
-    com->in.set_timeout(cached_timeout, com->user_data);
+    tss_com_set_timeout(com, cached_timeout);
 }

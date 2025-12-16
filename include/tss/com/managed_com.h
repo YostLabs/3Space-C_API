@@ -29,7 +29,12 @@ extern "C" {
 
 struct TSS_Managed_Com_Class {
     struct TSS_Com_Class base;
+
+    //Com class that is being wrapped, and pointer to the "self" that is fed into that com classes functions.
+    //Child data is separated out because a traditional structure will have managed_com_class at the top of the struct,
+    //and so can't cast the child com class to the parent type.
     const struct TSS_Com_Class *child;
+    struct TSS_Com_Class *child_container;
 
     //For peeking
     struct TSS_Ring_Buf2 read_ring;
@@ -40,7 +45,9 @@ struct TSS_Managed_Com_Class {
     uint16_t write_buffer_index;
 };
 
-TSS_API int tssCreateManagedCom(struct TSS_Com_Class *child, uint8_t *read_buf, size_t read_size, uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out);
+//TODO: Document me
+TSS_API int tssCreateManagedComDynamic(struct TSS_Com_Class *child, uint8_t *read_buf, size_t read_size, uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out);
+TSS_API int tssCreateManagedCom(struct TSS_Com_Class *child, struct TSS_Com_Class *child_container, uint8_t *read_buf, size_t read_size, uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out);
 
 //Applies the below default functions to the given com if that com does not already
 //have an implementation for the function being set.
@@ -49,9 +56,9 @@ TSS_API void tssManagedComAddDefaults(struct TSS_Com_Class *com);
 
 //Base functions that can be used for reading/clearing on any com class where user_data is a struct TSS_Com_Class and
 //the read function and get/set timeout functions are implemented.
-TSS_API int tssManagedComBaseReadUntil(uint8_t value, uint8_t *out, size_t size, void *com_class);
-TSS_API void tssManagedComBaseClear(void *com_class);
-TSS_API void tssManagedComBaseClearTimeout(void *com_class, uint32_t timeout_ms);
+TSS_API int tssManagedComBaseReadUntil(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size);
+TSS_API void tssManagedComBaseClear(struct TSS_Com_Class *com);
+TSS_API void tssManagedComBaseClearTimeout(struct TSS_Com_Class *com, uint32_t timeout_ms);
 
 #if __cplusplus
 }

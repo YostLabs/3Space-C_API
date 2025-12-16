@@ -21,7 +21,11 @@ static enum TSS_SettingsCallbackState getSettingsCallback(struct TSS_GetSettings
 
         //When using tssReadParams to read out the response, make sure to pass the checksum from the info
         //field to allow the sensor object to validate the checksum after this callback function returns.
-        int err = tssReadParams(info.com, info.setting->out_format, info.checksum, out_str);
+        int err = tssReadParams(info.com, info.setting->out_format, info.checksum, out_str, sizeof(out_str));
+        if(err) {
+            printf("Failed to read setting: %s %d\n", info.key, err);
+            return TSS_SettingsCallbackStateError;
+        }
         printf("%s Key: %s=%s\n", label, info.key, out_str);
 
         //The sensor object does not have to handle reading the value since it was read here.
@@ -53,7 +57,7 @@ int main() {
 
     com = (struct TSS_Com_Class*) &ser;
 
-    if(com->open(com->user_data)) {
+    if(tss_com_open(com)) {
         printf("Failed to open port.\r\n");
         return -1;
     }
@@ -100,7 +104,7 @@ int main() {
     // can return a varying number of keys when read. For example ?all reads all settings, or
     // ?{accel} reads all settings with 'accel' in their name. To read these out, since the number
     // of keys in the response is unknown, a callback function is used instead for each key.
-
+    
     //Provide the callback for each key, with optional user data that will be passed to the callback
     sensorReadAllSettings(&sensor, getSettingsCallback, "All");
 
