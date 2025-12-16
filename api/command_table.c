@@ -326,6 +326,7 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("filter_mref", FLOAT(3))
     W_SETTING("filter_mref_gps", DOUBLE(2))
     RW_SETTING("filter_mref_dip", FLOAT(1))
+    RW_SETTING("filter_conf_thresholds", FLOAT(1), FLOAT(1), FLOAT(1))
     //Components
     R_SETTING("valid_accels", STRING(1))
     R_SETTING("valid_gyros", STRING(1))
@@ -472,6 +473,7 @@ static const struct TSS_Setting m_settings[] = {
     RW_SETTING("sd_msc_enabled", U8(1))
     RW_SETTING("sd_msc_auto", U8(1))
     RW_SETTING("cat", STRING(1))
+    RW_SETTING("running_avg", FLOAT(1))
 //-------------------------AUTO GENERATED SETTINGS END---------------------------------------
 };
 

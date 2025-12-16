@@ -382,6 +382,14 @@ int sensorReadFilterMrefDip(TSS_Sensor *sensor, float *out) {
     return sensorReadSettings(sensor, "filter_mref_dip", out);
 }
 
+int sensorWriteFilterConfThresholds(TSS_Sensor *sensor, float min, float max, float cap) {
+    return sensorWriteSettings(sensor, (const char*[]) { "filter_conf_thresholds" }, 1, (const void*[]) { &min, &max, &cap });
+}
+
+int sensorReadFilterConfThresholds(TSS_Sensor *sensor, float *out_min, float *out_max, float *out_cap) {
+    return sensorReadSettings(sensor, "filter_conf_thresholds", out_min, out_max, out_cap);
+}
+
 int sensorReadValidAccels(TSS_Sensor *sensor, char *out, uint32_t size) {
     return sensorReadSettings(sensor, "valid_accels", out, size);
 }

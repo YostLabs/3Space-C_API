@@ -393,6 +393,8 @@ TSS_API int sensorReadFilterMref(TSS_Sensor *sensor, float out[3]);
 TSS_API int sensorWriteFilterMrefGps(TSS_Sensor *sensor, const double value[2]);
 TSS_API int sensorWriteFilterMrefDip(TSS_Sensor *sensor, float value);
 TSS_API int sensorReadFilterMrefDip(TSS_Sensor *sensor, float *out);
+TSS_API int sensorWriteFilterConfThresholds(TSS_Sensor *sensor, float min, float max, float cap);
+TSS_API int sensorReadFilterConfThresholds(TSS_Sensor *sensor, float *out_min, float *out_max, float *out_cap);
 TSS_API int sensorReadValidAccels(TSS_Sensor *sensor, char *out, uint32_t size);
 TSS_API int sensorReadValidGyros(TSS_Sensor *sensor, char *out, uint32_t size);
 TSS_API int sensorReadValidMags(TSS_Sensor *sensor, char *out, uint32_t size);
