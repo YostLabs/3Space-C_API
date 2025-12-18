@@ -87,7 +87,7 @@ Other examples include:
 * Streaming Data
 * Uploading Firmware
 * Utilizing the lower level API
-* ...
+* etc...
 
 ## Support
 If you have any questions reach out to techsupport@yostlabs.com or open an [Issue](https://github.com/YostLabs/3Space-C_API/issues).
