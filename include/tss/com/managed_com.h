@@ -49,11 +49,6 @@ struct TSS_Managed_Com_Class {
 TSS_API int tssCreateManagedComDynamic(struct TSS_Com_Class *child, uint8_t *read_buf, size_t read_size, uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out);
 TSS_API int tssCreateManagedCom(struct TSS_Com_Class *child, struct TSS_Com_Class *child_container, uint8_t *read_buf, size_t read_size, uint8_t *write_buf, size_t write_size, struct TSS_Managed_Com_Class *out);
 
-//Applies the below default functions to the given com if that com does not already
-//have an implementation for the function being set.
-TSS_API void tssManagedComAddDefaults(struct TSS_Com_Class *com);
-
-
 //Base functions that can be used for reading/clearing on any com class where user_data is a struct TSS_Com_Class and
 //the read function and get/set timeout functions are implemented.
 TSS_API int tssManagedComBaseReadUntil(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size);
