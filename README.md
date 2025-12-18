@@ -52,11 +52,13 @@ int main() {
     struct TSS_Com_Class *com;
     struct TSS_Sensor sensor;
 
-    create_serial_com_class(17, &ser);
+    //Create a serial object from COM17
+    uint8_t COM_PORT = 17;
+    create_serial_com_class(COM_PORT, &ser);
     com = (struct TSS_Com_Class*) &ser;
 
     if(tss_com_open(com)) {
-        printf("Failed to open port.\r\n");
+        printf("Failed to open port.\n");
         return -1;
     }
 
@@ -67,7 +69,6 @@ int main() {
         return -1;
     }
     
-    //Retrieve quaternion
     float quaternion[4];
     err = sensorGetTaredOrientation(&sensor, quaternion);
     if(err) {
