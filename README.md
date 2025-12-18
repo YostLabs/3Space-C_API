@@ -57,8 +57,9 @@ int main() {
     create_serial_com_class(COM_PORT, &ser);
     com = (struct TSS_Com_Class*) &ser;
 
-    if(tss_com_open(com)) {
-        printf("Failed to open port.\n");
+    err = tss_com_open(com);
+    if(err) {
+        printf("Failed to open port: %d\n", err);
         return -1;
     }
 
