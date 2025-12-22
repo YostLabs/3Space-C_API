@@ -59,16 +59,34 @@ struct TSS_Input_Stream {
     void (*clear_timeout)(struct TSS_Com_Class *com, uint32_t timeout);
 };
 
-
-//Modify me to have a write and write_send. Allow the OutputStream to buffer the write
-//until it needs to be sent if desired. (Will help for things like I2C and SPI)
-//Probably just have a write_begin, write, and write_end.
-//Have compiler flags to not include.
 struct TSS_Output_Stream {
+    /**
+     * @brief Writes the supplied data out.
+     * @note If TSS_BUFFERED_WRITES=1, and the implementing object is not
+     * being/intended to be wrapped by a TSS_Managed_Com_Class, this should instead save off
+     * the supplied data in preparation of being sent out, rather then instantly sending.
+     * @param com This com object.
+     * @param bytes Data to send.
+     * @param len Number of bytes located at \p bytes to send.
+     * @return 0 on success, non-zero on error (len > available_space)
+     */
     int (*write)(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len);
 
 #if TSS_BUFFERED_WRITES
+    /**
+     * @brief Perform any initialization required when starting to send data. Such as resetting buffer indices.
+     * @note Only required if TSS_BUFFERED_WRITES=1
+     * @param com This com object.
+     * @return 0 on success, non-zero on error
+     */
     int (*begin_write)(struct TSS_Com_Class *com);
+
+    /**
+     * @brief Finalize a write by sending out any data written via write between begin_write and end_write
+     * @note Only required if TSS_BUFFERED_WRITES=1
+     * @param com This com object.
+     * @return 0 on success, non-zero on error.
+     */
     int (*end_write)(struct TSS_Com_Class *com);
 #endif
 };
@@ -82,6 +100,17 @@ struct TSS_Output_Stream {
 #define TSS_COM_END_WRITE(com)
 #endif
 
+/**
+ * @brief Callback function for auto-detecting devices. When auto-detect is called, this 
+ * function will be called for each detected device.
+ * @param[in] com A detected communication object instance.
+ * @param user_data User-specified data passed into the detection function.
+ * @retval TSS_AUTO_DETECT_CONTINUE Continue detecting devices.
+ * @retval TSS_AUTO_DETECT_STOP Stop detecting devices and return TSS_AUTO_DETECT_STOP.
+ * @retval TSS_AUTO_DETECT_SUCCESS Stop detecting devices and return TSS_AUTO_DETECT_SUCCESS.
+ * @warning \p com is the same address for each iteration of an auto detect function, so do not store it
+ * if you are intentionally detecting multiple devices, as the pointer's data is overwritten each time the callback is called.
+ */
 typedef int (*TssComAutoDetectCallback)(struct TSS_Com_Class *com, void *user_data);
 
 //The callback should return one of CONTINUE, STOP, or SUCCESS
@@ -102,27 +131,55 @@ struct TSS_Com_Class_API {
     struct TSS_Input_Stream in;
     struct TSS_Output_Stream out;
 
-    //Open the device. If the device is already open
-    //leave the device open and return success
+    /**
+     * @brief Opens/Initializes the communication object. If the communication 
+     * object is already open, return success.
+     * @return 0 on success, non-zero on error.
+     */
     int (*open)(struct TSS_Com_Class *com);
 
-    //Close the device. If the device is already closed
-    //return success.
+    /**
+     * @brief Closes/Deinitializes the communication object, freeing any used resources. 
+     * If the communication object is already closed, return success
+     * @return 0 on success, non-zero on error.
+     */
     int (*close)(struct TSS_Com_Class *com);
-    //Some com devices may need to be rediscovered when reconnecting.
-    //This function provides a way to reconnect to a device, while using the same
-    //com object, based on a condition provided by a callback and its user data.
-    //(It is common for a USB connection to reenumerate when 
-    //the sensor restarts/enters bootloader)
+
+    /**
+     * @brief Rediscovers the communication object based on the callback and detect_data provided.
+     * @note This function is only required to be implemented if reenumerates in \ref TSS_Com_Class is set to true.
+     * @param[in,out] com The communication object to reenumerate.
+     * @param cb A \ref TssComAutoDetectCallback function to be called for each detected device.
+     * @param detect_data User data to be passed to the callback function. 
+     * @retval TSS_AUTO_DETECT_SUCCESS Device found and stopping enumeration.
+     * @retval TSS_AUTO_DETECT_STOP Stopped enumeration without finding a device.
+     * @retval TSS_AUTO_DETECT_DONE Enumerated through all devices without \p cb returning TSS_AUTO_DETECT_SUCCESS or TSS_AUTO_DETECT_STOP.
+     */
     int (*reenumerate)(struct TSS_Com_Class *com, TssComAutoDetectCallback cb, void *detect_data);
 
-    //Only required to be implemented if reenumerates is set to true.
-    //Alternatively, leave reenumerate as false and manually handle connection
-    //state in your application when changes are made.
-    //NOTE: Detect data is passed to the TssComAutoDetectCallback as the detect_data parameter
-    //If cb is NULL, the function should not call it and treat its return value as TSS_AUTO_DETECT_SUCCESS
-    //*out is the storage location used for the detected devices that are passed to TssComAutoDetectCallback
+    /**
+     * @brief Auto-detects devices and calls the provided callback for each detected device.
+     * @note This function is not required to be implemented, it is for convenience.
+     * @param[out] out Where to store the detected com class when the TssComAutoDetectCallback reports success.
+     * @param cb A \ref TssComAutoDetectCallback function to be called for each detected device. If NULL, return TSS_AUTO_DETECT_SUCCESS
+     * for the first detected device.
+     * @param detect_data User data to be passed to the callback function. 
+     * @retval TSS_AUTO_DETECT_SUCCESS Device found and stopping enumeration.
+     * @retval TSS_AUTO_DETECT_STOP Stopped enumeration without finding a device.
+     * @retval TSS_AUTO_DETECT_DONE Enumerated through all devices without \p cb returning TSS_AUTO_DETECT_SUCCESS or TSS_AUTO_DETECT_STOP.
+     */
     int (*auto_detect)(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *detect_data);
+
+    //WARNING: Internally, our API is designed to not dynamically allocate any memory. This means Yost Labs provided Com Classes
+    //utilize the output location provided for auto_detect/com to store the detected devices. Because of this, it is not safe
+    //to store/rely on the pointer passed to the callback function to not change.
+    //This is an internal restriction adhered to by Yost Labs, but does not require the user to be aware of when implementing their own Com Classes.
+    //The user should simply be aware that callback functions that work with their own custom com classes may not work with Yost Labs created com classes
+    //if this restriction is not adhered to.
+
+    //Note: reenumerate and auto_detect are functionally equivalent. The difference is only that case in which they are called.
+    //By knowing the intention of reenumerating, it is possible the reenumeration function could be further optimized. But for most
+    //cases, reenumerate can be implemented by simply calling auto_detect with the same parameters.
 };
 
 
@@ -210,17 +267,5 @@ static inline int tss_com_write(struct TSS_Com_Class *com, const uint8_t *bytes,
 {
     return com->api->out.write(com, bytes, len);
 }
-
-#if TSS_BUFFERED_WRITES
-static inline int tss_com_begin_write(struct TSS_Com_Class *com)
-{
-    return com->api->out.begin_write(com);
-}
-
-static inline int tss_com_end_write(struct TSS_Com_Class *com)
-{
-    return com->api->out.end_write(com);
-}
-#endif
 
 #endif /* __COM_CLASS_H__ */

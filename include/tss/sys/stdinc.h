@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #else
 
+#define printf(...) {}
+
 size_t strlen(const char *string);
 int strcmp (const char* str1, const char* str2);
 int tolower(int c);
