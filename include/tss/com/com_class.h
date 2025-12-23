@@ -19,15 +19,26 @@
 struct TSS_Com_Class;
 
 struct TSS_Input_Stream {
-    //Read functions return the number of bytes read
+    /**
+     * @brief Reads up to the specified number of bytes.
+     * @note This is a blocking call. The timeout set via \ref set_timeout determines how long to attempt to read.
+     * @param com This com object.
+     * @param num_bytes The number of bytes to read.
+     * @param out The location to store the read data.
+     * @return The number of bytes read or negative error code.
+     */
     int (*read)(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out);
-    //"Until" functions should include up to and including the value specified by value
-    int(*read_until)(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size);
 
-    //Peek functions return the number of bytes read.
-
-    //If not enough internal buffer space to peek the requested amount,
-    //return TSS_ERR_INSUFFICIENT_BUFFER.
+    /**
+     * @brief Reads up to, and including, the specified value.
+     * @note This is a blocking call. The timeout set via \ref set_timeout determines how long to attempt to read.
+     * @param com This com object.
+     * @param value The value to read until.
+     * @param out The location to store the read data.
+     * @param size The maximum length of data to read into \p out
+     * @return The number of bytes read or negative error code.
+     */
+    int (*read_until)(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size);
 
     //Peek should have a minimum look ahead length of 50. In general, if the available
     //look ahead length is not long enough, accidentally validating corrupt data becomes more likely.
@@ -44,18 +55,77 @@ struct TSS_Input_Stream {
     //If peek functionality is not desired at all, TSS_MINIMAL_SENSOR can be set in the tss/sys/config.h
     //and a version of the API that does NOT validate by looking ahead is available. Do note that version
     //has no capability of automatically realigning/recovering from corrupt data.
+
 #if !(TSS_MINIMAL_SENSOR)
+    /**
+     * @brief Peeks up to the specified number of bytes without modifying the buffer.
+     * @note This is a blocking call. The timeout set via \ref set_timeout determines how long to attempt to peek.
+     * @param com This com object.
+     * @param start Will start the peek this many bytes into the read buffer.
+     * @param num_bytes The number of bytes to peek.
+     * @param out The location to store the peek data.
+     * @retval On success, the number of bytes peeked.
+     * @retval TSS_ERR_INSUFFICIENT_BUFFER if not enough internal buffer space to peek the requested amount.
+     * @retval On error a negative error code.
+     */
     int (*peek)(struct TSS_Com_Class *com, size_t start, size_t num_bytes, uint8_t *out);
-    int(*peek_until)(struct TSS_Com_Class *com, size_t start, uint8_t value, uint8_t *out, size_t size);
+
+    /**
+     * @brief Peeks up to, and including, the specified value, without modifying the buffer.
+     * @note This is a blocking call. The timeout set via \ref set_timeout determines how long to attempt to read.
+     * @param com This com object.
+     * @param start Will start the peek this many bytes into the read buffer.
+     * @param value The value to peek until.
+     * @param out The location to store the peek data.
+     * @param size The maximum length of data to peek into \p out
+     * @retval On success the number of bytes peeked.
+     * @retval TSS_ERR_INSUFFICIENT_BUFFER if not enough internal buffer space to peek the requested amount.
+     * @retval On error a negative error code.* 
+     */
+    int (*peek_until)(struct TSS_Com_Class *com, size_t start, uint8_t value, uint8_t *out, size_t size);
+
+    /**
+     * @brief Returns the buffer size/maximum amount of data that can be peeked.
+     * @param com This com object.
+     * @return Max peek length.
+     */
     size_t (*peek_capacity)(struct TSS_Com_Class *com);
+
+    /**
+     * @brief Returns the current amount of available data to read.
+     * @param com This com object.
+     * @return Current available data length.
+     */    
     size_t (*length)(struct TSS_Com_Class *com);
 #endif
 
-    //Note: Setting timeout to 0 should result in an instantaneous read, not an indefinite block
+    /**
+     * @brief Sets the timeout used by the read, peek, and clear functions.
+     * @note A value of 0 indicates to not block for data, rather than an indefinite block.
+     * @param com This com object.
+     * @param timeout The new timeout in milliseconds.
+     */
     void (*set_timeout)(struct TSS_Com_Class *com, uint32_t timeout);
+
+    /**
+     * @brief Retrieve the current timeout used by read, peek, and clear functions.
+     * @param com This com object.
+     * @return The current timeout in milliseconds.
+     */
     uint32_t (*get_timeout)(struct TSS_Com_Class *com);
 
+    /**
+     * @brief Immediately clear all data available to read.
+     * @param com This com object.
+     */
     void (*clear_immediate)(struct TSS_Com_Class *com);
+
+    /**
+     * @brief Clears data until either there is no available data for at least the supplied \p timeout or the total time spent clearing exceeds the timeout set via \ref set_timeout.
+     * @warning This function may block up to the time set via \ref set_timeout.
+     * @param com This com object.
+     * @param timeout The amount of time, in milliseconds, the buffer must remain clear before returning.
+     */
     void (*clear_timeout)(struct TSS_Com_Class *com, uint32_t timeout);
 };
 
