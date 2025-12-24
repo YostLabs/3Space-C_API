@@ -56,6 +56,14 @@ int tssInitSensor(TSS_Sensor *sensor) {
     int err;
     uint8_t in_bootloader;
 
+    //Some bootloaders require this pattern first thing
+    //to work properly over certain communication interfaces.
+    //Without this, or moving it later, may cause a situation
+    //where the sensor can not be properly initialized when in bootloader.
+    TSS_COM_BEGIN_WRITE(sensor->com);
+    tss_com_write(sensor->com, (uint8_t*)"UUU", 3);
+    TSS_COM_END_WRITE(sensor->com);
+
     sensorInternalForceStopStreaming(sensor);
 
     //Clear out any garbage data
