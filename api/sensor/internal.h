@@ -4,6 +4,7 @@
 #include "tss/api/sensor.h"
 
 typedef int (*SensorInternalReadFunction)(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
+typedef int (*SensorInternalReadFunctionArray)(TSS_Sensor *sensor, const struct TSS_Command *command, void **outputs);
 
 //------------------Core Functions------------------------
 int sensorInternalExecuteCommand(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, ...);
@@ -13,6 +14,7 @@ int sensorInternalExecuteCommandCustom(TSS_Sensor *sensor, const struct TSS_Comm
 //These needs implemented per sensor type
 int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
 int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunction read_func, va_list outputs);
+int sensorInternalExecuteCommandCustomArray(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunctionArray read_func, void **outputs);
 int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active);
 
 //-----------------------Control-------------------------
@@ -28,6 +30,10 @@ static inline void sensorInternalHandleHeader(TSS_Sensor *sensor) {
 //-----------------------Custom parsing-----------------------
 int sensorInternalProcessStreamingBatch(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
 int sensorInternalReadStreamingBatch(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs);
+
+int sensorInternalProcessStreamingBatchArray(TSS_Sensor *sensor, const struct TSS_Command *command, void **outputs);
+int sensorInternalReadStreamingBatchArray(TSS_Sensor *sensor, const struct TSS_Command *command, void **outputs);
+
 int sensorInternalReadStreamingBatchChecksumOnly(TSS_Sensor *sensor);
 int sensorInternalUpdateDataStreaming(TSS_Sensor *sensor);
 

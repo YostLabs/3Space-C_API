@@ -128,11 +128,13 @@ static inline void* sensorGetUserData(TSS_Sensor *sensor) {
 //--------------------------------BASE FUNCTIONALITY-----------------------------------------
 TSS_API int sensorReadSettings(TSS_Sensor *sensor, const char *key_string, ...);
 TSS_API int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outputs);
+TSS_API int sensorReadSettingsArray(TSS_Sensor *sensor, const char *key_string, void **outputs);
 TSS_API int sensorReadSettingsQuery(TSS_Sensor *sensor, const char *key_string, TssGetSettingsCallback cb, void *user_data);
 TSS_API int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys, const void **data);
 
 TSS_API int sensorUpdateStreaming(TSS_Sensor *sensor);
 TSS_API int sensorProcessDataStreamingCallbackOutput(TSS_Sensor *sensor, ...);
+TSS_API int sensorProcessDataStreamingCallbackOutputArray(TSS_Sensor *sensor, void **outputs);
 /// @brief Reads file streaming data inside the file streaming callback
 /// @param sensor The sensor object
 /// @param output Where to read the data to
@@ -147,6 +149,8 @@ TSS_API int sensorProcessDebugCallbackOutput(TSS_Sensor *sensor, char *output, s
 TSS_API int sensorStreamingStart(TSS_Sensor *sensor, TssDataCallback cb);
 TSS_API int sensorFileStreamingStart(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *out_size);
 TSS_API int sensorLoggingStart(TSS_Sensor *sensor, TssDataCallback cb);
+
+TSS_API int sensorStreamingGetPacketArray(TSS_Sensor *sensor, void **outputs);
 
 /// @brief Disconnects and reconnects to the sensor. May
 /// require additional com class functionality (Reenumerate/Auto Detect)

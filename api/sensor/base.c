@@ -36,6 +36,11 @@ int sensorProcessDataStreamingCallbackOutput(TSS_Sensor *sensor, ...)
     return result;
 }
 
+int sensorProcessDataStreamingCallbackOutputArray(TSS_Sensor *sensor, void **outputs)
+{
+    return sensorInternalReadStreamingBatchArray(sensor, NULL, outputs);
+}
+
 int sensorProcessFileStreamingCallbackOutput(TSS_Sensor *sensor, void *output, uint16_t size)
 {
     uint16_t num_read, read_len;
@@ -352,6 +357,27 @@ int sensorInternalReadStreamingBatch(TSS_Sensor *sensor, const struct TSS_Comman
     cur_slot = sensor->streaming.data.commands;
     while(*cur_slot != NULL) {
         err_or_checksum = tssReadCommandVp(sensor->com, *cur_slot, &outputs);
+        if(err_or_checksum < 0) {
+            return err_or_checksum;
+        }
+        checksum += err_or_checksum;
+        cur_slot++;
+    }
+
+    return checksum;
+}
+
+int sensorInternalReadStreamingBatchArray(TSS_Sensor *sensor, const struct TSS_Command *command, void **outputs)
+{
+    uint8_t checksum;
+    int err_or_checksum;
+    const struct TSS_Command **cur_slot;
+    
+    checksum = 0;
+    cur_slot = sensor->streaming.data.commands;
+    uint16_t argindex = 0;
+    while(*cur_slot != NULL) {
+        err_or_checksum = tssReadCommandArray(sensor->com, *cur_slot, &argindex, outputs);
         if(err_or_checksum < 0) {
             return err_or_checksum;
         }

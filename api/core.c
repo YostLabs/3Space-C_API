@@ -40,6 +40,7 @@ int tssWriteCommand(struct TSS_Com_Class *com, bool header, const struct TSS_Com
     return TSS_SUCCESS;
 }
 
+
 int tssReadCommand(struct TSS_Com_Class *com, const struct TSS_Command *command, ...)
 {
     va_list args;
@@ -65,6 +66,17 @@ int tssReadCommandVp(struct TSS_Com_Class *com, const struct TSS_Command *comman
     checksum = 0;
     err = tssReadParamsVp(com, command->out_format, &checksum, args);
     if(err) return err;
+    return checksum;
+}
+
+int tssReadCommandArray(struct TSS_Com_Class *com, const struct TSS_Command *command, uint16_t *argindex, void **out)
+{
+    uint8_t checksum;
+    int err;
+    if(command->out_format == NULL) return 0;
+    checksum = 0;
+    err = tssReadParamsArray(com, command->out_format, &checksum, argindex, out);
+    if(err) { return err; }
     return checksum;
 }
 
@@ -368,8 +380,13 @@ int tssGetSettingsReadCb(struct TSS_Com_Class *com, TssGetSettingsCallback callb
 }
 
 struct GetSettingUserData {
-    va_list *args;
+    union {
+        va_list *va;
+        void **ptrs;
+    } args;
+    
     uint16_t num_read;
+    uint16_t argindex; //Only used for the array version of the call
     int result;
 };
 
@@ -378,7 +395,20 @@ static enum TSS_SettingsCallbackState getSettingsCallback(
 {
     struct GetSettingUserData *user = user_data;
 
-    user->result = tssReadParamsVp(info.com, info.setting->out_format, info.checksum, user->args);
+    user->result = tssReadParamsVp(info.com, info.setting->out_format, info.checksum, user->args.va);
+    if(user->result != TSS_SUCCESS) {
+        return TSS_SettingsCallbackStateError;
+    }
+    user->num_read++;
+    return TSS_SettingsCallbackStateProcessed;
+}
+
+static enum TSS_SettingsCallbackState getSettingsCallbackArray(
+    struct TSS_GetSettingsCallbackInfo info, void *user_data)
+{
+    struct GetSettingUserData *user = user_data;
+
+    user->result = tssReadParamsArray(info.com, info.setting->out_format, info.checksum, &user->argindex, user->args.ptrs);
     if(user->result != TSS_SUCCESS) {
         return TSS_SettingsCallbackStateError;
     }
@@ -401,12 +431,28 @@ int tssGetSettingsReadV(struct TSS_Com_Class *com, uint16_t *num_read, va_list a
 {
     int result;
     struct GetSettingUserData user_data = {
-        .args = &args,
+        .args.va = &args,
         .num_read = 0,
         .result = TSS_SUCCESS
     };
 
     result = tssGetSettingsReadCb(com, getSettingsCallback, &user_data);
+    if(num_read != NULL) {
+        *num_read = user_data.num_read;
+    }
+    return (result != TSS_ERR_GET_SETTING_CALLBACK) ? result : user_data.result;
+}
+
+int tssGetSettingsReadArray(struct TSS_Com_Class *com, uint16_t *num_read, void **out) {
+    int result;
+    struct GetSettingUserData user_data = {
+        .args.ptrs = out,
+        .num_read = 0,
+        .argindex = 0,
+        .result = TSS_SUCCESS
+    };
+
+    result = tssGetSettingsReadCb(com, getSettingsCallbackArray, &user_data);
     if(num_read != NULL) {
         *num_read = user_data.num_read;
     }
@@ -610,6 +656,60 @@ int tssReadParamsVp(struct TSS_Com_Class *com, const struct TSS_Param *cur_param
     }
 
     return TSS_SUCCESS; 
+}
+
+/// @brief Read params into the supplied locations
+/// @param com The com to read from
+/// @param cur_param The param array
+/// @param checksum Modified checksum
+/// @param argindex Acts as a way of continously calling read params and tracking position to save values.
+/// Can leave as NULL to just read from the beggining.
+/// @param outargs The params to load
+/// @return The number of outargs tokens consume, else negative on error.
+int tssReadParamsArray(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum, uint16_t *argindex, void **outargs)
+{
+    uint16_t _argindex = 0;
+    uintptr_t str_len;
+    uint32_t len, i;
+
+    if(argindex == NULL) argindex = &_argindex;
+    
+    while(!TSS_PARAM_IS_NULL(cur_param)) {
+        uint8_t *out = (uint8_t*) outargs[(*argindex)++];
+
+        if(TSS_PARAM_IS_STRING(cur_param)) {
+            //When using string width specifier, the value MUST be 32 bits. EX: 4ul;
+            str_len = (uintptr_t) outargs[(*argindex)++];
+            len = tss_com_read_until(com, '\0', out, str_len);
+
+            if(len == 0) {
+                if(str_len > 0) out[0] = '\0';
+                return TSS_ERR_READ; 
+            }
+
+            if(out[len-1] != '\0') {
+                //Force the string to be null terminated
+                out[str_len-1] = '\0';
+                return TSS_ERR_BUFFER_OVERFLOW;
+            }
+        }
+        else {
+            len = tss_com_read(com, cur_param->count * cur_param->size, out);
+            if(TSS_ENDIAN_IS_BIG) {
+                swap_param_endianess(out, cur_param);
+            }
+            if(len != cur_param->count * cur_param->size) {
+                return TSS_ERR_READ;
+            }
+        }
+
+        for(i = 0; i < len; i++) {
+            *checksum += out[i];
+        }
+        cur_param++;
+    }
+
+    return TSS_SUCCESS;
 }
 
 int tssReadParamsChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum)

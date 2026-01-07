@@ -196,6 +196,17 @@ int sensorInternalExecuteCommandCustomV(TSS_Sensor *sensor, const struct TSS_Com
     return TSS_SUCCESS;
 }
 
+int sensorInternalExecuteCommandCustomArray(TSS_Sensor *sensor, const struct TSS_Command *command, const void **input, SensorInternalReadFunctionArray read_func, void **outputs)
+{
+    int err_or_checksum;
+    err_or_checksum = checkDirty(sensor);
+    if(err_or_checksum) return err_or_checksum;
+    tssWriteCommand(sensor->com, sensor->_header_enabled, command, input);
+    err_or_checksum = read_func(sensor, command, outputs);
+    if(err_or_checksum < 0) return err_or_checksum;
+    return TSS_SUCCESS;
+}
+
 int sensorInternalBaseCommandRead(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs)
 {
     int result;
@@ -218,6 +229,17 @@ int sensorInternalProcessStreamingBatch(TSS_Sensor *sensor, const struct TSS_Com
     }
     sensorInternalHandleHeader(sensor);
     return sensorInternalReadStreamingBatch(sensor, command, outputs);
+}
+
+int sensorInternalProcessStreamingBatchArray(TSS_Sensor *sensor, const struct TSS_Command *command, void **outputs)
+{
+    int result;
+    result = awaitCommandResponse(sensor, command->num, sensor->streaming.data.output_size, sensor->streaming.data.output_size);
+    if(result != THREESPACE_AWAIT_COMMAND_FOUND) {
+        return TSS_ERR_RESPONSE_NOT_FOUND;
+    }
+    sensorInternalHandleHeader(sensor);
+    return sensorInternalReadStreamingBatchArray(sensor, command, outputs);   
 }
 
 //Common to both read setting functions
@@ -254,6 +276,16 @@ int sensorReadSettingsV(TSS_Sensor *sensor, const char *key_string, va_list outp
         return result;
     }
     return tssGetSettingsReadV(sensor->com, &sensor->last_num_settings_read, outputs);
+}
+
+int sensorReadSettingsArray(TSS_Sensor *sensor, const char *key_string, void **outputs)
+{
+    int result;
+    result = baseReadSettings(sensor, key_string);
+    if(result < 0) {
+        return result;
+    }
+    return tssGetSettingsReadArray(sensor->com, &sensor->last_num_settings_read, outputs);
 }
 
 int sensorReadSettingsQuery(TSS_Sensor *sensor, const char *key_string, TssGetSettingsCallback cb, void *user_data)

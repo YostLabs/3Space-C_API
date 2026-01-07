@@ -29,6 +29,7 @@ TSS_API int tssWriteCommand(struct TSS_Com_Class *com, bool header, const struct
 TSS_API int tssReadCommand(struct TSS_Com_Class *com, const struct TSS_Command *command, ...);
 TSS_API int tssReadCommandV(struct TSS_Com_Class *com, const struct TSS_Command *command, va_list args);
 TSS_API int tssReadCommandVp(struct TSS_Com_Class *com, const struct TSS_Command *command, va_list *args);
+TSS_API int tssReadCommandArray(struct TSS_Com_Class *com, const struct TSS_Command *command, uint16_t *argindex, void **out);
 TSS_API int tssReadCommandChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Command *command);
 
 
@@ -62,6 +63,7 @@ typedef enum TSS_SettingsCallbackState (*TssGetSettingsCallback)(struct TSS_GetS
 TSS_API int tssGetSettingsWrite(struct TSS_Com_Class *com, bool header, const char *key_string);
 TSS_API int tssGetSettingsRead(struct TSS_Com_Class *com, uint16_t *num_read, ...);
 TSS_API int tssGetSettingsReadV(struct TSS_Com_Class *com, uint16_t *num_read, va_list args);
+TSS_API int tssGetSettingsReadArray(struct TSS_Com_Class *com, uint16_t *num_read, void **out);
 TSS_API int tssGetSettingsReadCb(struct TSS_Com_Class *com, TssGetSettingsCallback callback, void *user_data);
 
 TSS_API int tssSetSettingsWrite(struct TSS_Com_Class *com, bool header, const char **keys, uint8_t num_keys, const void **data);
@@ -75,6 +77,7 @@ TSS_API int tssPeekSettingsHeader(struct TSS_Com_Class *com, uint32_t *id);
 //Low Level Reading Functions
 TSS_API int tssReadParams(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum, ...);
 TSS_API int tssReadParamsVp(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum, va_list *args);
+TSS_API int tssReadParamsArray(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum, uint16_t *argindex, void **outargs);
 
 TSS_API int tssReadParamsChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum);
 TSS_API int tssReadBytesChecksumOnly(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *checksum);
