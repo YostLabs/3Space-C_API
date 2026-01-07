@@ -141,7 +141,7 @@ static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out)
         out[i] = ring_pop(&self->read_ring);
     }
 
-    return i + self->child->api->in.read(self->child_container, num_bytes - i, out + i);   
+    return (int)i + self->child->api->in.read(self->child_container, num_bytes - i, out + i);   
 }
 
 static int read_until(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, size_t size)
@@ -155,13 +155,13 @@ static int read_until(struct TSS_Com_Class *com, uint8_t value, uint8_t *out, si
         *out = ring_pop(&self->read_ring);
         num_read++;
         if(*out == value) {
-            return num_read;
+            return (int)num_read;
         }
         out++;
     }
 
     num_read += self->child->api->in.read_until(self->child_container, value, out, size - num_read);
-    return num_read;  
+    return (int)num_read;  
 }
 
 static int peek(struct TSS_Com_Class *com, size_t start, size_t num_bytes, uint8_t *out)
@@ -186,7 +186,7 @@ static int peek(struct TSS_Com_Class *com, size_t start, size_t num_bytes, uint8
         out[i] = ring_read(&self->read_ring, i + start);
     }
 
-    return i;
+    return (int)i;
 }
 
 static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, uint8_t *out, size_t size)
@@ -219,7 +219,7 @@ static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, ui
         return TSS_ERR_INSUFFICIENT_BUFFER;
     }
 
-    return num_read;
+    return (int)num_read;
 }
 
 inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
@@ -404,7 +404,7 @@ int tssManagedComBaseReadUntil(struct TSS_Com_Class *com, uint8_t value, uint8_t
 
     //Restore timeout back to what it was
     tss_com_set_timeout(com, timeout);
-    return num_read;
+    return (int)num_read;
 }
 
 void tssManagedComBaseClear(struct TSS_Com_Class *com)

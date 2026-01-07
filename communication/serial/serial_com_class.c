@@ -57,7 +57,7 @@ void create_serial_com_class(uint8_t port, struct SerialComClass *out)
 static int write(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len)
 {
     struct SerialComClass *self = (struct SerialComClass *)com;
-    serWrite(&self->port, (char*)bytes, len);
+    serWrite(&self->port, (char*)bytes, (uint32_t)len);
     return 0;
 }
 
@@ -81,7 +81,7 @@ static int close(struct TSS_Com_Class *com)
 static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out)
 {
     struct SerialComClass *self = (struct SerialComClass *)com;
-    return serRead(&self->port, (char*)out, num_bytes);
+    return serRead(&self->port, (char*)out, (uint32_t)num_bytes);
 }
 
 static void set_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
