@@ -9,6 +9,12 @@
 #ifndef __TSS_CONFIG_H__
 #define __TSS_CONFIG_H__
 
+//If enabled, TSS_Params will also include their type.
+//The API does not require this to function, but it can be helpful
+//for the user to write more dynamic function handlers. The only reason to
+//turn this off is if on a memory limited platform.
+#define TSS_INCLUDE_PARAM_TYPE 1
+
 //If enabled, standard library functions will be used,
 //else un-optimized, less efficent versions will be used as a fallback.
 //The used functions are string functions, look at tss_string.c to see

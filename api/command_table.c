@@ -1,20 +1,25 @@
 #include "tss/api/command.h"
 #include "tss/sys/stdinc.h"
+#include "tss/sys/config.h"
 
-#define PARAM(_count, _size) TSS_PARAM_INITIALIZER(_count, _size)
+#if TSS_INCLUDE_PARAM_TYPE
+#define PARAM(_count, _size, _type) TSS_PARAM_INITIALIZER(_count, _size, _type)
+#else
+#define PARAM(_count, _size, _type) TSS_PARAM_INITIALIZER(_count, _size)
+#endif
 #define NULL_PARAM TSS_PARAM_NULL_INITIALIZER
 #define DYNAMIC_TYPE(x) NULL_PARAM
-#define FLOAT(_count) PARAM(_count, 4)
-#define DOUBLE(_count) PARAM(_count, 8)
-#define U8(_count)  PARAM(_count, 1)
-#define U16(_count) PARAM(_count, 2)
-#define U32(_count) PARAM(_count, 4)
-#define U64(_count) PARAM(_count, 8)
-#define S8(_count)  PARAM(_count, 1)
-#define S16(_count) PARAM(_count, 2)
-#define S32(_count) PARAM(_count, 4)
-#define S64(_count) PARAM(_count, 8)
-#define STRING(_count) PARAM(_count, 0)
+#define FLOAT(_count) PARAM(_count, 4, TSS_ParamTypeFloat)
+#define DOUBLE(_count) PARAM(_count, 8, TSS_ParamTypeDouble)
+#define U8(_count)  PARAM(_count, 1, TSS_ParamTypeU8)
+#define U16(_count) PARAM(_count, 2, TSS_ParamTypeU16)
+#define U32(_count) PARAM(_count, 4, TSS_ParamTypeU32)
+#define U64(_count) PARAM(_count, 8, TSS_ParamTypeU64)
+#define S8(_count)  PARAM(_count, 1, TSS_ParamTypeS8)
+#define S16(_count) PARAM(_count, 2, TSS_ParamTypeS16)
+#define S32(_count) PARAM(_count, 4, TSS_ParamTypeS32)
+#define S64(_count) PARAM(_count, 8, TSS_ParamTypeS64)
+#define STRING(_count) PARAM(_count, 0, TSS_ParamTypeString)
 
 #define CMD(_num, _in_format, _out_format) \
 (const struct TSS_Command[]) { \
