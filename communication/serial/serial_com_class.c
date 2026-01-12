@@ -93,7 +93,7 @@ static void set_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
 uint32_t get_timeout(struct TSS_Com_Class *com)
 {
     struct SerialComClass *self = (struct SerialComClass *)com;
-    return self->port.timeout;
+    return serGetTimeout(&self->port);
 }
 
 struct PortEnumerate {

@@ -16,7 +16,6 @@ int serConfigBufferSize(struct SerialDevice *ser, uint32_t in_size, uint32_t out
 
 uint32_t serWrite(struct SerialDevice *ser, const char *buffer, uint32_t len);
 uint32_t serRead(struct SerialDevice *ser, char *buffer, uint32_t len);
-uint32_t serReadImmediate(struct SerialDevice *ser, char *buffer, uint32_t len);
 void serClear(struct SerialDevice *ser);
 
 uint32_t serGetTimeout(struct SerialDevice *ser);
