@@ -2,7 +2,7 @@
   #ifdef TSS_API_EXPORTS
     #define TSS_API __declspec(dllexport)
   #else
-    #define TSS_API __declspec(dllimport)
+    #define TSS_API
   #endif
 #elif defined(__GNUC__) || defined(__clang__)
   #define TSS_API __attribute__((visibility("default")))
