@@ -218,6 +218,10 @@ int sensorGetBarometerPressureByID(TSS_Sensor *sensor, uint8_t id, float *out_mb
     return sensorInternalExecuteCommand(sensor, tssGetCommand(16), (const void*[]) { &id }, out_mbar);
 }
 
+int sensorGetHeading(TSS_Sensor *sensor, float *out_heading) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(17), NULL, out_heading);
+}
+
 int sensorSetOffsetWithCurrentOrientation(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(19), NULL);
 }
@@ -498,6 +502,18 @@ int sensorBatteryGetStatus(TSS_Sensor *sensor, uint8_t *out_status) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(203), NULL, out_status);
 }
 
+int sensorWMMGetField(TSS_Sensor *sensor, float *out_declination, float *out_inclination, float *out_F, float *out_H, float *out_N, float *out_E, float *out_D) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(208), NULL, out_declination, out_inclination, out_F, out_H, out_N, out_E, out_D);
+}
+
+int sensorWMMUpdatePosition(TSS_Sensor *sensor) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(209), NULL);
+}
+
+int sensorWMMUpdateDate(TSS_Sensor *sensor) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(210), NULL);
+}
+
 int sensorGPSGetIsActive(TSS_Sensor *sensor) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(214), NULL);
 }
@@ -524,6 +540,10 @@ int sensorGPSGetSatellites(TSS_Sensor *sensor, uint8_t *out_num_satellites) {
 
 int sensorGPSReset(TSS_Sensor *sensor, uint8_t mode) {
     return sensorInternalExecuteCommand(sensor, tssGetCommand(220), (const void*[]) { &mode });
+}
+
+int sensorGPSSetData(TSS_Sensor *sensor, double latitude, double longitude, float altitude) {
+    return sensorInternalExecuteCommand(sensor, tssGetCommand(221), (const void*[]) { &latitude, &longitude, &altitude });
 }
 
 int sensorCommitSettings(TSS_Sensor *sensor) {

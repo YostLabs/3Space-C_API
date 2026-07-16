@@ -390,6 +390,26 @@ int sensorReadFilterConfThresholds(TSS_Sensor *sensor, float *out_min, float *ou
     return sensorReadSettings(sensor, "filter_conf_thresholds", out_min, out_max, out_cap);
 }
 
+int sensorWriteHeadingVector(TSS_Sensor *sensor, const float value[3]) {
+    return sensorWriteSettings(sensor, (const char*[]) { "heading_vector" }, 1, (const void*[]) { value });
+}
+
+int sensorReadHeadingVector(TSS_Sensor *sensor, float out[3]) {
+    return sensorReadSettings(sensor, "heading_vector", out);
+}
+
+int sensorWriteHeadingVectorAxis(TSS_Sensor *sensor, const char *value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "heading_vector_axis" }, 1, (const void*[]) { value });
+}
+
+int sensorWriteHeadingOffset(TSS_Sensor *sensor, float offset, uint8_t mode) {
+    return sensorWriteSettings(sensor, (const char*[]) { "heading_offset" }, 1, (const void*[]) { &offset, &mode });
+}
+
+int sensorReadHeadingOffset(TSS_Sensor *sensor, float *out_offset, uint8_t *out_mode) {
+    return sensorReadSettings(sensor, "heading_offset", out_offset, out_mode);
+}
+
 int sensorReadValidAccels(TSS_Sensor *sensor, char *out, uint32_t size) {
     return sensorReadSettings(sensor, "valid_accels", out, size);
 }
@@ -1048,12 +1068,12 @@ int sensorReadPtsVersion(TSS_Sensor *sensor, char *out, uint32_t size) {
     return sensorReadSettings(sensor, "pts_version", out, size);
 }
 
-int sensorWritePtsDate(TSS_Sensor *sensor, const uint32_t value[3]) {
-    return sensorWriteSettings(sensor, (const char*[]) { "pts_date" }, 1, (const void*[]) { value });
+int sensorWritePtsDate(TSS_Sensor *sensor, uint32_t day, uint32_t month, uint32_t year) {
+    return sensorWriteSettings(sensor, (const char*[]) { "pts_date" }, 1, (const void*[]) { &day, &month, &year });
 }
 
-int sensorReadPtsDate(TSS_Sensor *sensor, uint32_t out[3]) {
-    return sensorReadSettings(sensor, "pts_date", out);
+int sensorReadPtsDate(TSS_Sensor *sensor, uint32_t *out_day, uint32_t *out_month, uint32_t *out_year) {
+    return sensorReadSettings(sensor, "pts_date", out_day, out_month, out_year);
 }
 
 int sensorReadPtsWmmVersion(TSS_Sensor *sensor, char *out, uint32_t size) {
@@ -1372,6 +1392,122 @@ int sensorReadLogImmediateOutputHeaderMode(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "log_immediate_output_header_mode", out);
 }
 
+int sensorWriteRtcYear(TSS_Sensor *sensor, uint16_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_year" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcYear(TSS_Sensor *sensor, uint16_t *out) {
+    return sensorReadSettings(sensor, "rtc_year", out);
+}
+
+int sensorWriteRtcMonth(TSS_Sensor *sensor, uint8_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_month" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcMonth(TSS_Sensor *sensor, uint8_t *out) {
+    return sensorReadSettings(sensor, "rtc_month", out);
+}
+
+int sensorWriteRtcDay(TSS_Sensor *sensor, uint8_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_day" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcDay(TSS_Sensor *sensor, uint8_t *out) {
+    return sensorReadSettings(sensor, "rtc_day", out);
+}
+
+int sensorWriteRtcHour(TSS_Sensor *sensor, uint8_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_hour" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcHour(TSS_Sensor *sensor, uint8_t *out) {
+    return sensorReadSettings(sensor, "rtc_hour", out);
+}
+
+int sensorWriteRtcMinute(TSS_Sensor *sensor, uint8_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_minute" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcMinute(TSS_Sensor *sensor, uint8_t *out) {
+    return sensorReadSettings(sensor, "rtc_minute", out);
+}
+
+int sensorWriteRtcSecond(TSS_Sensor *sensor, uint8_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_second" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcSecond(TSS_Sensor *sensor, uint8_t *out) {
+    return sensorReadSettings(sensor, "rtc_second", out);
+}
+
+int sensorWriteRtcDatetime(TSS_Sensor *sensor, uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_datetime" }, 1, (const void*[]) { &year, &month, &day, &hour, &minute, &second });
+}
+
+int sensorReadRtcDatetime(TSS_Sensor *sensor, uint16_t *out_year, uint8_t *out_month, uint8_t *out_day, uint8_t *out_hour, uint8_t *out_minute, uint8_t *out_second) {
+    return sensorReadSettings(sensor, "rtc_datetime", out_year, out_month, out_day, out_hour, out_minute, out_second);
+}
+
+int sensorWriteRtcSource(TSS_Sensor *sensor, uint8_t mode) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_source" }, 1, (const void*[]) { &mode });
+}
+
+int sensorReadRtcSource(TSS_Sensor *sensor, uint8_t *out_mode) {
+    return sensorReadSettings(sensor, "rtc_source", out_mode);
+}
+
+int sensorWriteUtcOffset(TSS_Sensor *sensor, float offset) {
+    return sensorWriteSettings(sensor, (const char*[]) { "utc_offset" }, 1, (const void*[]) { &offset });
+}
+
+int sensorReadUtcOffset(TSS_Sensor *sensor, float *out_offset) {
+    return sensorReadSettings(sensor, "utc_offset", out_offset);
+}
+
+int sensorWriteBatChgRate(TSS_Sensor *sensor, uint16_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "bat_chg_rate" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadBatChgRate(TSS_Sensor *sensor, uint16_t *out) {
+    return sensorReadSettings(sensor, "bat_chg_rate", out);
+}
+
+int sensorWriteBatColdThreshold(TSS_Sensor *sensor, float temperature_c, float chg_rate) {
+    return sensorWriteSettings(sensor, (const char*[]) { "bat_cold_threshold" }, 1, (const void*[]) { &temperature_c, &chg_rate });
+}
+
+int sensorReadBatColdThreshold(TSS_Sensor *sensor, float *out_temperature_c, float *out_chg_rate) {
+    return sensorReadSettings(sensor, "bat_cold_threshold", out_temperature_c, out_chg_rate);
+}
+
+int sensorWriteBatWarmThreshold(TSS_Sensor *sensor, float temperature_c, float chg_rate) {
+    return sensorWriteSettings(sensor, (const char*[]) { "bat_warm_threshold" }, 1, (const void*[]) { &temperature_c, &chg_rate });
+}
+
+int sensorReadBatWarmThreshold(TSS_Sensor *sensor, float *out_temperature_c, float *out_chg_rate) {
+    return sensorReadSettings(sensor, "bat_warm_threshold", out_temperature_c, out_chg_rate);
+}
+
+int sensorWriteBatHotThreshold(TSS_Sensor *sensor, float temperature_c, float chg_rate) {
+    return sensorWriteSettings(sensor, (const char*[]) { "bat_hot_threshold" }, 1, (const void*[]) { &temperature_c, &chg_rate });
+}
+
+int sensorReadBatHotThreshold(TSS_Sensor *sensor, float *out_temperature_c, float *out_chg_rate) {
+    return sensorReadSettings(sensor, "bat_hot_threshold", out_temperature_c, out_chg_rate);
+}
+
+int sensorWriteBatOffsetThreshold(TSS_Sensor *sensor, float value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "bat_offset_threshold" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadBatOffsetThreshold(TSS_Sensor *sensor, float *out) {
+    return sensorReadSettings(sensor, "bat_offset_threshold", out);
+}
+
+int sensorReadBatMah(TSS_Sensor *sensor, uint16_t *out) {
+    return sensorReadSettings(sensor, "bat_mah", out);
+}
+
 int sensorWriteBleName(TSS_Sensor *sensor, const char *value) {
     return sensorWriteSettings(sensor, (const char*[]) { "ble_name" }, 1, (const void*[]) { value });
 }
@@ -1402,6 +1538,54 @@ int sensorWriteGpsLed(TSS_Sensor *sensor, uint8_t value) {
 
 int sensorReadGpsLed(TSS_Sensor *sensor, uint8_t *out) {
     return sensorReadSettings(sensor, "gps_led", out);
+}
+
+int sensorWriteGpsPeriodicFixTimes(TSS_Sensor *sensor, const uint16_t value[2]) {
+    return sensorWriteSettings(sensor, (const char*[]) { "gps_periodic_fix_times" }, 1, (const void*[]) { value });
+}
+
+int sensorReadGpsPeriodicFixTimes(TSS_Sensor *sensor, uint16_t out[2]) {
+    return sensorReadSettings(sensor, "gps_periodic_fix_times", out);
+}
+
+int sensorWriteGpsPeriodicUnfixedTimes(TSS_Sensor *sensor, const uint16_t value[2]) {
+    return sensorWriteSettings(sensor, (const char*[]) { "gps_periodic_unfixed_times" }, 1, (const void*[]) { value });
+}
+
+int sensorReadGpsPeriodicUnfixedTimes(TSS_Sensor *sensor, uint16_t out[2]) {
+    return sensorReadSettings(sensor, "gps_periodic_unfixed_times", out);
+}
+
+int sensorWriteGpsPeriodicEnabled(TSS_Sensor *sensor, uint8_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "gps_periodic_enabled" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadGpsPeriodicEnabled(TSS_Sensor *sensor, uint8_t *out) {
+    return sensorReadSettings(sensor, "gps_periodic_enabled", out);
+}
+
+int sensorWriteRtcGpsSyncInterval(TSS_Sensor *sensor, uint64_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_gps_sync_interval" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcGpsSyncInterval(TSS_Sensor *sensor, uint64_t *out) {
+    return sensorReadSettings(sensor, "rtc_gps_sync_interval", out);
+}
+
+int sensorWriteRtcGpsForceSync(TSS_Sensor *sensor, uint8_t value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "rtc_gps_force_sync" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadRtcGpsForceSync(TSS_Sensor *sensor, uint8_t *out) {
+    return sensorReadSettings(sensor, "rtc_gps_force_sync", out);
+}
+
+int sensorWriteUsbTimeout(TSS_Sensor *sensor, float value) {
+    return sensorWriteSettings(sensor, (const char*[]) { "usb_timeout" }, 1, (const void*[]) { &value });
+}
+
+int sensorReadUsbTimeout(TSS_Sensor *sensor, float *out) {
+    return sensorReadSettings(sensor, "usb_timeout", out);
 }
 
 //-----------------------------------AUTO GENERATED END---------------------------------------
