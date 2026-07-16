@@ -25,11 +25,9 @@
 
 // Detect macOS
 #elif defined(__APPLE__) && defined(__MACH__)
-    #define DEFAULT_IMPLEMENTATION
 
 // Detect Linux
 #elif defined(__linux__) || defined(unix)
-    #define DEFAULT_IMPLEMENTATION
 
 #endif
 
