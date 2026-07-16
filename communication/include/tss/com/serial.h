@@ -5,6 +5,8 @@
 #include "tss/com/backend/serial/ser_device.h"
 #include "tss/utility/ring_buf2.h"
 
+#include "tss/export.h"
+
 struct SerialComClass {
     struct TSS_Managed_Com_Class base;
     struct TSS_Com_Class serial_com;
@@ -19,8 +21,8 @@ struct SerialComClass {
 #endif
 };
 
-void create_serial_com_class(uint8_t port, struct SerialComClass *out);
+TSS_API void create_serial_com_class(uint8_t port, struct SerialComClass *out);
 
-int serial_com_auto_detect(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *user_data);
+TSS_API int serial_com_auto_detect(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *user_data);
 
 #endif
