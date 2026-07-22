@@ -126,6 +126,8 @@ int sensorReconnect(TSS_Sensor *sensor, uint32_t timeout_ms)
 
     if(!sensor->com->reenumerates) {
         //If it doesn't reenumerate, then just ensure the port is open
+        //Close first though to clean up any resources that may need released.
+        tss_com_close(sensor->com);
         result = tss_com_open(sensor->com);
         if(result != TSS_SUCCESS) return TSS_ERR_DETECTION;
         start_time = tssTimeGet();
