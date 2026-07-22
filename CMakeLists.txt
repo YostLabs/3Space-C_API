@@ -4,17 +4,18 @@ project(TSS_Api VERSION 0.1.0 LANGUAGES C CXX)
 #Build the Library
 add_library(TSS_Api SHARED)
 add_subdirectory(api)
-target_compile_definitions(TSS_Api PRIVATE TSS_API_EXPORTS)
+target_compile_definitions(TSS_Api PRIVATE TSS_API_EXPORTS _POSIX_C_SOURCE=199309L)
 target_include_directories(TSS_Api PUBLIC
                 ${PROJECT_SOURCE_DIR}/include
 )
 
 #Build the Executable
 add_executable(my_example 
-    ${PROJECT_SOURCE_DIR}/communication/serial/win_serial.c
+    ${PROJECT_SOURCE_DIR}/communication/serial/linux_serial.c
     ${PROJECT_SOURCE_DIR}/communication/serial/serial_com_class.c
 
     ${PROJECT_SOURCE_DIR}/Examples/sending_commands.c
+    
     #${PROJECT_SOURCE_DIR}/Examples/firmware_upload.c
     #${PROJECT_SOURCE_DIR}/Examples/ble_test.c
 )

@@ -8,6 +8,7 @@
 #include "tss/com/backend/serial/win_serial.h"
 #elif defined(__APPLE__) && defined(__MACH__)
 #elif defined(__linux__) || defined(unix)
+#include "tss/com/backend/serial/linux_serial.h"
 #endif
 
 int serOpen(uint8_t port, uint32_t baudrate, struct SerialDevice *out);

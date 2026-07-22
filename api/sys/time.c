@@ -28,6 +28,24 @@
 
 // Detect Linux
 #elif defined(__linux__) || defined(unix)
+    #define DEFAULT_IMPLEMENTATION
+
+    #include <time.h>
+    static tss_time_t defaultGetTime(void)
+    {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+    }
+
+    // Required to return in milliseconds
+    static uint32_t defaultDiffTime(tss_time_t start_time)
+    {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        uint64_t now = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+        return (uint32_t)((now - start_time) / 1000000ULL);
+    }
 
 #endif
 
