@@ -4,6 +4,8 @@
 #include <stdio.h>
 
 #define SPI_DEVICE "/dev/spidev0.0"
+#define GPIO_CHIP "/dev/gpiochip0"
+#define CS_LINE 25 // GPIO pin number for Chip Select (CS)
 
 int main() {
     int err;
@@ -12,7 +14,13 @@ int main() {
     
     struct TSS_Sensor sensor;
 
-    create_spi_com_class(SPI_DEVICE, 900000, &ser);
+    SpiPortId id = {
+        .device_name = SPI_DEVICE,
+        .chip_path = GPIO_CHIP,
+        .cs_line_num = CS_LINE, // GPIO pin number for Chip Select (CS)
+    };
+
+    create_spi_com_class(id, 10000000, &ser);
 
     com = (struct TSS_Com_Class*) &ser;
 
@@ -38,7 +46,11 @@ int main() {
     printf("Quat: %f %f %f %f\n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
     printf("Accel: %f %f %f\n", accel[0], accel[1], accel[2]);
 
-    sensorSoftwareReset(&sensor);
+    int reset_err = sensorSoftwareReset(&sensor);
+    if(reset_err) {
+        printf("Failed to reset sensor: %d\n", reset_err);
+        return -1;
+    }
 
     uint64_t time;
     sensorGetTimestamp(&sensor, &time);

@@ -2,13 +2,30 @@
 #define __TSS_LINUX_SPI_H__
 
 #include <stdint.h>
+#include <gpiod.h>
 
-typedef char* SpiPortId;
+struct SpiDeviceInfo {
+    char *device_name;
+    char *chip_path;
+    unsigned int cs_line_num;
+};
+
+/*
+* When creating a new SpiDevice, you must provide the device_name, 
+*/
+typedef struct SpiDeviceInfo SpiPortId;
 
 struct SpiDevice {
-    SpiPortId port_id;
-    
+    struct SpiDeviceInfo id;
+
+    //File Descriptor for SPI Device
     int fd;
+
+    //Manual Chip Select (Required because Linux SPI driver does not wait long enough after asserting CS before reading the first byte)
+    struct gpiod_chip *chip;
+    struct gpiod_line *cs_line;
+
+    //Configuration parameters for the SPI device
     uint32_t speed_hz;
     uint8_t bits_per_word;
     uint8_t mode;

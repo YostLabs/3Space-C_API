@@ -13,8 +13,6 @@
 #include <linux/spi/spidev.h>
 #include <sys/ioctl.h>
 
-#define SPI_DEV_MAXNAME 32
-
 // -----------------------------------------------------------------------
 // Open / Close
 // -----------------------------------------------------------------------
@@ -22,21 +20,53 @@
 int spiOpen(SpiPortId id, uint32_t speed_hz, struct SpiDevice *out)
 {
     *out = (struct SpiDevice) {
-        .port_id       = id,
+        .id = id,
         .fd            = -1,
         .speed_hz      = speed_hz,
         .bits_per_word = 8,
-        .mode          = SPI_MODE_0,
+        .mode          = SPI_MODE_0 | SPI_NO_CS,
         .timeout       = 1000,
         .header_timeout= 1,
         .read_fn       = spiReadNoIrq,
     };
 
-    int fd = open(id, O_RDWR);
-    if (fd < 0) {
-        printf("Failed to open SPI device %d: %s\n", id, strerror(errno));
+    //----------------Configure GPIO CS----------------
+    //Grab the chip
+    out->chip = gpiod_chip_open(id.chip_path);
+    if(!out->chip) {
+        perror("gpiod_chip_open");
+        return -1;
+    }   
+
+    //Grab the pin
+    out->cs_line = gpiod_chip_get_line(out->chip, id.cs_line_num);
+    if(!out->cs_line) {
+        perror("gpiod_chip_get_line");
+        gpiod_chip_close(out->chip);
+        out->chip = NULL;
         return -1;
     }
+
+    //Configure the pin
+    if(gpiod_line_request_output(out->cs_line, "spi_cs", 1) < 0) {
+        perror("gpiod_line_request_output");
+        gpiod_chip_close(out->chip);
+        out->chip = NULL;
+        return -1;
+    }
+
+    //----------------Configure SPI device----------------
+
+    int fd = open(id.device_name, O_RDWR);
+    if (fd < 0) {
+        fprintf(stderr, "Failed to open SPI device %s: %s\n", id.device_name, strerror(errno));
+        gpiod_line_release(out->cs_line);
+        gpiod_chip_close(out->chip);
+        out->cs_line = NULL;
+        out->chip = NULL;
+        return -1;
+    }
+
     out->fd = fd;
 
     if (ioctl(fd, SPI_IOC_WR_MODE,           &out->mode)          < 0 ||
@@ -44,10 +74,13 @@ int spiOpen(SpiPortId id, uint32_t speed_hz, struct SpiDevice *out)
         ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ,   &out->speed_hz)      < 0) 
         {
             close(fd);
+            gpiod_line_release(out->cs_line);
+            gpiod_chip_close(out->chip);
+            out->cs_line = NULL;
+            out->chip = NULL;
             out->fd = -1;
             return -1;
         }
-
     return 0;
 }
 
@@ -55,6 +88,8 @@ void spiClose(struct SpiDevice *dev)
 {
     if (dev->fd < 0) return;
     close(dev->fd);
+    gpiod_line_release(dev->cs_line);
+    gpiod_chip_close(dev->chip);
     dev->fd = -1;
 }
 
@@ -92,6 +127,7 @@ int spiWrite(struct SpiDevice *dev, const uint8_t *data, size_t len)
         { .rx_buf = 0, .speed_hz = dev->speed_hz, .bits_per_word = dev->bits_per_word },
     };
 
+    gpiod_line_set_value(dev->cs_line, 0); // Set CS low
     uint8_t send_len = 0;
     while(len > 0) {
         send_len = (len > 255) ? 255 : len;
@@ -102,6 +138,7 @@ int spiWrite(struct SpiDevice *dev, const uint8_t *data, size_t len)
         xfer[1].tx_buf = (unsigned long)data;
         xfer[1].len    = send_len;
         if (ioctl(dev->fd, SPI_IOC_MESSAGE(2), xfer) < 0) {
+            gpiod_line_set_value(dev->cs_line, 1); // Set CS high
             perror("spiWrite: SPI_IOC_MESSAGE");
             return -1;
         }
@@ -109,7 +146,7 @@ int spiWrite(struct SpiDevice *dev, const uint8_t *data, size_t len)
         len -= send_len;
         data += send_len;
     }
-
+    gpiod_line_set_value(dev->cs_line, 1); // Set CS high
     return 0;
 }
 
@@ -145,12 +182,18 @@ int spiReadNoIrq(struct SpiDevice *dev, uint8_t *out, uint8_t length, uint32_t t
     if (length == 0) return 0;
     // Send READ_DATA_WITH_SIZE command followed by the requested byte count.
     uint8_t header[2] = { TSS_TRANSACTION_READ_DATA_WITH_SIZE_BYTE, length };
+    gpiod_line_set_value(dev->cs_line, 0); // Set CS low
     spiBasicWrite(dev, header, sizeof(header));
+    gpiod_line_set_value(dev->cs_line, 1); // Set CS high
 
     uint8_t status = 0xFF, data_len = 0;
     tss_time_t start = tssTimeGet();
     uint32_t elapsed_time = 0;
     while (status == 0xFF && elapsed_time <= dev->header_timeout) {
+        //Doing in this order to ensure a toggle between iterations, and that it stays low after the while loop.
+        gpiod_line_set_value(dev->cs_line, 1); // Set CS high
+        gpiod_line_set_value(dev->cs_line, 0); // Set CS low
+
         uint32_t remaining = timeout_ms - elapsed_time;
         memset(header, 0xFF, sizeof(header));
         spiBasicRead(dev, header, sizeof(header));
@@ -169,6 +212,7 @@ int spiReadNoIrq(struct SpiDevice *dev, uint8_t *out, uint8_t length, uint32_t t
     }
 
     if(status == 0xFF) {
+        gpiod_line_set_value(dev->cs_line, 1); // Set CS high
         fprintf(stderr, "spiReadNoIrq: timeout waiting for valid header\n");
         return TSS_ERR_TIMEOUT;
     }
@@ -176,6 +220,7 @@ int spiReadNoIrq(struct SpiDevice *dev, uint8_t *out, uint8_t length, uint32_t t
     if (data_len > 0) {
         spiBasicRead(dev, out, data_len);
     }
+    gpiod_line_set_value(dev->cs_line, 1); // Set CS high
     return data_len;
 }
 

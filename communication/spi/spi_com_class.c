@@ -42,7 +42,7 @@ void create_spi_com_class(SpiPortId id, uint32_t speed_hz, struct SpiComClass *o
 {
     *out = (struct SpiComClass) {
         .device = {
-            .port_id = id,
+            .id = id,
             .speed_hz = speed_hz,
         },
         .spi_com = (struct TSS_Com_Class) {
@@ -63,7 +63,7 @@ void create_spi_com_class(SpiPortId id, uint32_t speed_hz, struct SpiComClass *o
 static int spi_open(struct TSS_Com_Class *com)
 {
     struct SpiComClass *self = (struct SpiComClass *)com;
-    return spiOpen(self->device.port_id, self->device.speed_hz, &self->device);
+    return spiOpen(self->device.id, self->device.speed_hz, &self->device);
 }
 
 static int spi_close(struct TSS_Com_Class *com)
