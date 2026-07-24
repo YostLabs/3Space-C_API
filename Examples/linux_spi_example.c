@@ -20,7 +20,13 @@ int main() {
         .cs_line_num = CS_LINE, // GPIO pin number for Chip Select (CS)
     };
 
-    create_spi_com_class(id, 10000000, &ser);
+    //Check the manual for correct SPI speeds. The possible SPI speeds are
+    //based on the cpu_speed setting of the sensor. This default value is the
+    //maximum speed for the default cpu_speed of 96MHz. If you are encountering
+    //any communication errors, try lowering this speed, or increasing the sensors
+    //cpu_speed setting.
+    //https://yostlabs.com/v3usermanual
+    create_spi_com_class(id, 5000000, &ser);
 
     com = (struct TSS_Com_Class*) &ser;
 
