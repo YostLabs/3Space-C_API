@@ -18,6 +18,17 @@
 
 struct TSS_Com_Class;
 
+/*
+* Note about implementing read/peek functions:
+* If returning an error, timeout errors should NOT be reported.
+* In the event of a timeout, the function should simply return less data
+* than requested. The only errors that are desired to be reported are
+* hardware errors that are not self recoverable. If a read returns an error,
+* the command that was being read will fail, and so it may be desirable to make
+* your communication class self handle and reattempt before returning in the event
+* an error occurs.
+*/
+
 struct TSS_Input_Stream {
     /**
      * @brief Reads up to the specified number of bytes.

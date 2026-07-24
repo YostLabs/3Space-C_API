@@ -315,7 +315,7 @@ int tssGetSettingsReadCb(struct TSS_Com_Class *com, TssGetSettingsCallback callb
         key = buffer;
 
         //Failed to read or find key
-        if(len == 0 || key[len-1] != '\0') {
+        if(len <= 0 || key[len-1] != '\0') {
             return TSS_ERR_READ;
         }
 
@@ -628,7 +628,7 @@ int tssReadParamsVp(struct TSS_Com_Class *com, const struct TSS_Param *cur_param
             str_len = va_arg(*args, uint32_t);
             len = tss_com_read_until(com, '\0', out, str_len);
 
-            if(len == 0) {
+            if(len <= 0) {
                 if(str_len > 0) out[0] = '\0';
                 return TSS_ERR_READ; 
             }
@@ -645,7 +645,7 @@ int tssReadParamsVp(struct TSS_Com_Class *com, const struct TSS_Param *cur_param
                 swap_param_endianess(out, cur_param);
             }
             if(len != cur_param->count * cur_param->size) {
-                return -TSS_ERR_READ;
+                return TSS_ERR_READ;
             }
         }
 
@@ -682,7 +682,7 @@ int tssReadParamsArray(struct TSS_Com_Class *com, const struct TSS_Param *cur_pa
             str_len = (uintptr_t) outargs[(*argindex)++];
             len = tss_com_read_until(com, '\0', out, str_len);
 
-            if(len == 0) {
+            if(len <= 0) {
                 if(str_len > 0) out[0] = '\0';
                 return TSS_ERR_READ; 
             }
@@ -722,7 +722,7 @@ int tssReadParamsChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Param 
         if(TSS_PARAM_IS_STRING(cur_param)) {
             do {
                 len = tss_com_read_until(com, '\0', buffer, sizeof(buffer));
-                if(len == 0) {
+                if(len <= 0) {
                     return TSS_ERR_READ;
                 }
                 for(i = 0; i < len; i++) {
@@ -735,7 +735,7 @@ int tssReadParamsChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Param 
             while(param_size > 0) {
                 len = (param_size < sizeof(buffer)) ? param_size : sizeof(buffer);
                 len = tss_com_read(com, len, buffer);
-                if(len == 0) {
+                if(len <= 0) {
                     return TSS_ERR_READ;
                 }
                 for(i = 0; i < len; i++) {

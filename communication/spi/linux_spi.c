@@ -241,8 +241,16 @@ int spiRead(struct SpiDevice *dev, size_t num_bytes, uint8_t *out)
 
         uint32_t remaining = dev->timeout - elapsed_time;
         int n = dev->read_fn(dev, out + total, (uint8_t)chunk, remaining);
-        if (n < 0) return n;
-        total += (size_t)n;
+        if(n >= 0) {
+            total += (size_t)n;
+        }
+        else if(n != TSS_ERR_TIMEOUT) {
+            //Hardware error. Timeout errors
+            //do not propagate, just return less
+            //data than requested. Other errors are fatal.
+            return n;
+        }
+        
         elapsed_time = tssTimeDiff(start);
     }
 
