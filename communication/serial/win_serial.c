@@ -120,7 +120,7 @@ uint32_t serWrite(struct SerialDevice *ser, const char *buffer, uint32_t len)
 
 void serClear(struct SerialDevice *ser)
 {
-    bool result = PurgeComm(ser->handle, PURGE_RXCLEAR);
+    PurgeComm(ser->handle, PURGE_RXCLEAR);
 }
 
 static void serSetActualTimeout(struct SerialDevice *ser, uint32_t timeout_ms)
@@ -171,12 +171,12 @@ const char * serPortToName(uint8_t port, char *out, size_t size)
 
 static const char * findPattern(const char ** string, const char * pattern, int * value)
 {
-    char c, n = 0;
+    char n = 0;
     const char * start = *string;
     const char * pp = pattern;
     // Check for the string pattern
     while (1) {
-        c = *(*string)++;
+        char c = *(*string)++;
         if (c == '\0') {
             if (*pp == '?') break;
             if (**string == '\0') break;
@@ -204,8 +204,8 @@ static const char * findPattern(const char ** string, const char * pattern, int 
             }
         }
     }
-// Return the value
-    * value = n;
+    // Return the value
+    *value = n;
     return start;
 }
 

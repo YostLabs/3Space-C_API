@@ -191,7 +191,7 @@ uint8_t serEnumeratePorts(uint8_t (*cb)(const char *name, uint8_t port, void *us
     DIR *dev_dir = opendir("/dev");
     if(!dev_dir) return 0;
 
-    struct dirent *entry;
+    const struct dirent *entry;
     while((entry = readdir(dev_dir)) != NULL) {
         for(size_t i = 0; i < num_types; i++) {
             const char *prefix = device_types[i].prefix;

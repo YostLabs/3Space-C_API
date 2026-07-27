@@ -549,9 +549,8 @@ int tssSettingKeyCmp(const char* key, const char* key_format)
 
 const struct TSS_Setting* tssGetSetting(const char *name)
 {
-    const struct TSS_Setting *setting;
     for(uint16_t i = 0; i < sizeof(m_settings) / sizeof(m_settings[0]); i++) {
-        setting = &m_settings[i];
+        const struct TSS_Setting *setting = &m_settings[i];
         if(tssSettingKeyCmp(name, setting->name) == 0) {
             return setting;
         }

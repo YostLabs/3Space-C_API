@@ -70,9 +70,8 @@ int sensorFileReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data) {
 //------------------------------CUSTOM LOGGING-----------------------------------
 
 int sensorLoggingStart(TSS_Sensor *sensor, TssDataCallback cb) {
-    int err;
     uint8_t immediate_output, status;
-    err = sensorReadLogImmediateOutput(sensor, &immediate_output);
+    int err = sensorReadLogImmediateOutput(sensor, &immediate_output);
     if(err < 0) return err;
 
     if(immediate_output) {
@@ -98,11 +97,14 @@ int sensorLoggingStart(TSS_Sensor *sensor, TssDataCallback cb) {
     if(err) return err;
     if(status != 1) return TSS_ERR_FAILED_START_LOGGING;
 
-    if(!err && immediate_output) {
+    //Success!
+
+    if(immediate_output) {
         sensor->streaming.log.active = true;
         sensor->streaming.log.cb = cb;
     }
-    return err;
+
+    return TSS_SUCCESS;
 }
 
 int sensorLoggingStop(TSS_Sensor *sensor) {

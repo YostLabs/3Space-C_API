@@ -64,6 +64,11 @@ void tssHeaderFromBytes(const struct TSS_Header_Info *info, uint8_t *data, struc
     }
     if(info->bitfield & TSS_HEADER_LENGTH_BIT) {
         out->length = (uint16_t)(((uint32_t)data[0]) | ((uint32_t)data[1]) << 8);
+
+        //Leaving the following += in for future proofing
+
+        // cppcheck-suppress uselessAssignmentPtrArg
+        // cppcheck-suppress unreadVariable
         data += 2;
     }
 }

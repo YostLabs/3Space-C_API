@@ -156,7 +156,7 @@ int sensorUpdateCachedSettings(TSS_Sensor *sensor) {
     err = sensorReadSerialNumber(sensor, &sensor->serial_number);
     if(err) return err;
 
-    return err;
+    return TSS_SUCCESS;
 }
 
 static int checkDirty(TSS_Sensor *sensor) {
@@ -312,22 +312,17 @@ inline static int keyInArray(const char *key, const char * const *array, uint8_t
 inline static void checkAndCacheDebugMode(TSS_Sensor *sensor, const char **keys, 
     uint8_t num_keys, const void **data) 
 {
-    const struct TSS_Setting *setting;
-    const struct TSS_Param *param;
-    uint16_t i;
-    uint8_t value;
-
-    for(i = 0; i < num_keys; i++) {
+    for(uint16_t i = 0; i < num_keys; i++) {
         if(tssSettingKeyCmp(keys[i], "debug_mode") == 0) {
-            value = *((uint8_t*)(*data));
+            uint8_t value = *((uint8_t*)(*data));
             sensor->debug._immediate = (value == 1);
             return;
         }
         else {
             //Advance the data by params input length so that can get the value associated with the debug key when found
-            setting = tssGetSetting(keys[i]);
+            const struct TSS_Setting *setting = tssGetSetting(keys[i]);
             if(setting == NULL) return;
-            param = setting->in_format;
+            const struct TSS_Param *param = setting->in_format;
             while(!TSS_PARAM_IS_NULL(param)) {
                 data++;
                 param++;
@@ -341,9 +336,6 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
     const void **data)
 {
     int err;
-    uint32_t id;
-    uint16_t i;
-
     err = checkDirty(sensor);
     if(err) return err;
 
@@ -358,6 +350,7 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
         return TSS_ERR_RESPONSE_NOT_FOUND;
     }
 
+    uint32_t id;
     err = tssReadSettingsHeader(sensor->com, &id);
     if(err < 0) return err;
     err = tssSetSettingsRead(sensor->com, &sensor->last_write_setting_response);
@@ -375,7 +368,7 @@ int sensorWriteSettings(TSS_Sensor *sensor, const char **keys, uint8_t num_keys,
     }
     else{
         //Check for header keys
-        for(i = 0; i < num_keys; i++) {
+        for(uint16_t i = 0; i < num_keys; i++) {
             if(keyInArray(keys[i], K_HEADER_KEYS, sizeof(K_HEADER_KEYS) / sizeof(K_HEADER_KEYS[0])) >= 0) {
                 err = cacheHeader(sensor);
                 if(err) return err;
@@ -452,16 +445,13 @@ static int peekValidatePacket(TSS_Sensor *sensor, const struct TSS_Header *heade
 }
 
 static int awaitCommandResponse(TSS_Sensor *sensor, uint8_t cmd_num, uint16_t min_data_len, uint16_t max_data_len) {
-    int err;
-    tss_time_t start_time;
-    struct TSS_Header header;
-
     //Nothing to do but pretend it was found. Can't check if header isn't enabled.
     if(!sensor->_header_enabled) return THREESPACE_AWAIT_COMMAND_FOUND;
 
-    start_time = tssTimeGet();
+    tss_time_t start_time = tssTimeGet();
     while(tssTimeDiff(start_time) < getTimeout(sensor)) {
-        err = tssPeekHeader(sensor->com, &sensor->header_cfg, &header);
+        struct TSS_Header header;
+        int err = tssPeekHeader(sensor->com, &sensor->header_cfg, &header);
         if(err) {
             continue;
         }
@@ -596,13 +586,10 @@ static int awaitSetSettingResponse(TSS_Sensor *sensor, uint16_t num_keys)
 }
 
 static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header) {
-    uint16_t expected_out_size;
-    size_t com_length;
-
     if(header != NULL) {
-        com_length = comLength(sensor);
+        size_t com_length = comLength(sensor);
         if(sensor->streaming.data.active && header->echo == TSS_STREAMING_DATA_BATCH_COMMAND_NUM) {
-            expected_out_size = sensor->streaming.data.output_size;
+            uint16_t expected_out_size = sensor->streaming.data.output_size;
             if(com_length < (uint16_t)(expected_out_size + sensor->header_cfg.size) && com_length < peekCapacity(sensor)) {
                 return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
             }
@@ -612,7 +599,7 @@ static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header) {
             }
         }
         else if(sensor->streaming.log.active && header->echo == TSS_STREAMING_FILE_READ_BYTES_COMMAND_NUM) {
-            expected_out_size = (header->length < TSS_LOG_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_LOG_STREAMING_MAX_PACKET_SIZE;
+            uint16_t expected_out_size = (header->length < TSS_LOG_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_LOG_STREAMING_MAX_PACKET_SIZE;
             if(com_length < (uint16_t)(expected_out_size + sensor->header_cfg.size) && com_length < peekCapacity(sensor)) {
                 return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
             }
@@ -622,8 +609,8 @@ static int internalUpdate(TSS_Sensor *sensor, const struct TSS_Header *header) {
             }
         }
         else if(sensor->streaming.file.active && header->echo == TSS_STREAMING_FILE_READ_BYTES_COMMAND_NUM) {
-            expected_out_size = (header->length < TSS_FILE_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_FILE_STREAMING_MAX_PACKET_SIZE;
-            if(com_length < (uint16_t)(expected_out_size + sensor->header_cfg.size) && peekCapacity(sensor)) {
+            uint16_t expected_out_size = (header->length < TSS_FILE_STREAMING_MAX_PACKET_SIZE) ? header->length : TSS_FILE_STREAMING_MAX_PACKET_SIZE;
+            if(com_length < (uint16_t)(expected_out_size + sensor->header_cfg.size) && com_length < peekCapacity(sensor)) {
                 return THREESPACE_UPDATE_COMMAND_NOT_ENOUGH_DATA;
             }
             if(peekValidatePacket(sensor, header, expected_out_size, expected_out_size) == TSS_SUCCESS) {
@@ -705,11 +692,6 @@ int sensorBootloaderIsActive(TSS_Sensor *sensor, uint8_t *active)
 
 int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
 {
-    //On firmware response, receives "<KEY_ERROR>\0\0\x", so len + 3
-    char response[TSS_SETTING_KEY_ERR_STRING_LEN + 3];
-    uint32_t id;
-    int result;
-
     //This first part primes the potential Automatic Uart Baudrate detection the bootloader does
     TSS_COM_BEGIN_WRITE(sensor->com);
     tss_com_write(sensor->com, (uint8_t*)"UUU", 3);
@@ -719,7 +701,7 @@ int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
     tssGetSettingsWrite(sensor->com, true, "?");
 
     //Await a setting response with the bootloader check toggled to true
-    result = awaitGetSettingResponse(sensor, 2, true);
+    int result = awaitGetSettingResponse(sensor, 2, true);
     if(result == THREESPACE_AWAIT_BOOTLOADER_FOUND) {
         *active = 1;
         result = TSS_SUCCESS;
@@ -736,6 +718,9 @@ int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
 
         //Clear the <KEY_ERROR> response, only what is necessary
         //in case doing something like streaming. Don't want to clear too much.
+        //On firmware response, receives "<KEY_ERROR>\0\0\x", so len + 3
+        char response[TSS_SETTING_KEY_ERR_STRING_LEN + 3];
+        uint32_t id;
         tssReadSettingsHeader(sensor->com, &id);
         tss_com_read(sensor->com, TSS_SETTING_KEY_ERR_STRING_LEN + 3, (uint8_t*)response);
     }

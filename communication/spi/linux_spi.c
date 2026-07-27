@@ -128,9 +128,8 @@ int spiWrite(struct SpiDevice *dev, const uint8_t *data, size_t len)
     };
 
     gpiod_line_set_value(dev->cs_line, 0); // Set CS low
-    uint8_t send_len = 0;
     while(len > 0) {
-        send_len = (len > 255) ? 255 : (uint8_t)len;
+        uint8_t send_len = (len > 255) ? 255 : (uint8_t)len;
         write_header[1] = send_len;
         
         xfer[0].tx_buf = (unsigned long)write_header;
@@ -154,6 +153,7 @@ int spiWrite(struct SpiDevice *dev, const uint8_t *data, size_t len)
 // Basic read
 // -----------------------------------------------------------------------
 
+// cppcheck-suppress constParameterPointer
 int spiBasicRead(struct SpiDevice *dev, uint8_t *out, size_t len)
 {
     if (len == 0 || dev->fd < 0) return 0;

@@ -11,7 +11,10 @@ int tssUtilStreamSlotStringToCommands(const char *str, const struct TSS_Command*
         slot.cmd_num = (uint8_t)strtol(str, (char**)&str, 10);
         if(*str == ':') {
             str++;
+            
+            // cppcheck-suppress unreadVariable
             slot.param = (uint8_t)strtol(str, (char**)&str, 10);
+            // cppcheck-suppress unreadVariable
             slot.has_param = true;
         }
 

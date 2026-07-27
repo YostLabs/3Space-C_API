@@ -109,19 +109,19 @@ static inline void sensorSetUserData(TSS_Sensor *sensor, void *user_data) {
 }
 
 //----------------------------GETTERS--------------------------------------
-static inline struct TSS_Header sensorGetLastHeader(TSS_Sensor *sensor) {
+static inline struct TSS_Header sensorGetLastHeader(const TSS_Sensor *sensor) {
     return sensor->last_header;
 }
-static inline struct TSS_Setting_Response sensorGetLastSettingResponse(TSS_Sensor *sensor) {
+static inline struct TSS_Setting_Response sensorGetLastSettingResponse(const TSS_Sensor *sensor) {
     return sensor->last_write_setting_response;
 }
-static inline uint16_t sensorGetLastSettingsNumRead(TSS_Sensor *sensor) {
+static inline uint16_t sensorGetLastSettingsNumRead(const TSS_Sensor *sensor) {
     return sensor->last_num_settings_read;
 }
-static inline bool sensorIsStreaming(TSS_Sensor *sensor) {
+static inline bool sensorIsStreaming(const TSS_Sensor *sensor) {
     return sensor->streaming.data.active || sensor->streaming.file.active || sensor->streaming.log.active;
 }
-static inline void* sensorGetUserData(TSS_Sensor *sensor) {
+static inline void* sensorGetUserData(const TSS_Sensor *sensor) {
     return sensor->user_data;
 }
 
@@ -176,7 +176,7 @@ TSS_API int sensorBootloaderGetSerialNumber(TSS_Sensor *sensor, uint64_t *serial
 TSS_API int sensorBootloaderLoadFirmware(TSS_Sensor *sensor, uint32_t timeout_ms);
 TSS_API int sensorBootloaderEraseFirmware(TSS_Sensor *sensor, uint32_t timeout_ms);
 TSS_API int sensorBootloaderGetInfo(TSS_Sensor *sensor, struct TSS_Bootloader_Info *info);
-TSS_API int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint16_t num_bytes, uint32_t timeout_ms);
+TSS_API int sensorBootloaderProgram(TSS_Sensor *sensor, const uint8_t *bytes, uint16_t num_bytes, uint32_t timeout_ms);
 TSS_API int sensorBootloaderGetStatus(TSS_Sensor *sensor, uint32_t *status);
 TSS_API int sensorBootloaderRestoreFactorySettings(TSS_Sensor *sensor);
 

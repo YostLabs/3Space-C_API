@@ -84,7 +84,7 @@ int main()
         }
         if(uploader.packet_count != last_packet_num) {
             last_packet_num = uploader.packet_count;
-            printf("Uploaded packet %d\n", last_packet_num);
+            printf("Uploaded packet %zu\n", last_packet_num);
         }
     }
 

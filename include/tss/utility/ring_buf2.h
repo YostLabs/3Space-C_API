@@ -16,23 +16,23 @@ struct TSS_Ring_Buf2 {
     size_t capacity;
 };
 
-inline static size_t ring_size(struct TSS_Ring_Buf2 *ring) {
+inline static size_t ring_size(const struct TSS_Ring_Buf2 *ring) {
     return ring->w_index - ring->r_index;
 }
 
-inline static size_t ring_space(struct TSS_Ring_Buf2 *ring) {
+inline static size_t ring_space(const struct TSS_Ring_Buf2 *ring) {
     return ring->capacity - ring_size(ring);
 }
 
-inline static bool ring_full(struct TSS_Ring_Buf2 *ring) {
+inline static bool ring_full(const struct TSS_Ring_Buf2 *ring) {
     return ring_size(ring) == ring->capacity;
 }
 
-inline static bool ring_empty(struct TSS_Ring_Buf2 *ring) {
+inline static bool ring_empty(const struct TSS_Ring_Buf2 *ring) {
     return ring->r_index == ring->w_index;
 }
 
-inline static size_t ring_index(struct TSS_Ring_Buf2 *ring, size_t index) {
+inline static size_t ring_index(const struct TSS_Ring_Buf2 *ring, size_t index) {
     return index & (ring->capacity-1);
 }
 

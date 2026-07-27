@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 TSS_API int tssFirmwareUploaderCreate(TSS_Sensor *sensor, uint8_t *buffer, size_t buffer_size, struct TSS_Firmware_Uploader *out);
-TSS_API int tssFirmwareUpload(struct TSS_Firmware_Uploader *uploader, char *data, size_t len);
+TSS_API int tssFirmwareUpload(struct TSS_Firmware_Uploader *uploader, const char *data, size_t len);
 
 #ifdef __cplusplus
 }

@@ -66,7 +66,7 @@ int main() {
     tssReadHeader(com, &header_format, &header);
     tssReadCommand(com, accel_command, accel);
 
-    printf("Header: Echo - %d  Timestamp - %lu\n", header.echo, header.timestamp);
+    printf("Header: Echo - %d  Timestamp - %lu\n", header.echo, (unsigned long)header.timestamp);
     printf("Accel: %f %f %f\n", accel[0], accel[1], accel[2]);
 
     return 0;

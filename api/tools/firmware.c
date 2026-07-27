@@ -39,12 +39,10 @@ inline static int parseData(struct TSS_Firmware_Uploader *uploader, char c);
 
 inline static int processTag(struct TSS_Firmware_Uploader *uploader);
 
-int tssFirmwareUpload(struct TSS_Firmware_Uploader *uploader, char *data, size_t len)
+int tssFirmwareUpload(struct TSS_Firmware_Uploader *uploader, const char *data, size_t len)
 {
-    size_t i;
-    int result;
-    for(i = 0; i < len; i++) {
-        result = parse(uploader, data[i]);
+    for(size_t i = 0; i < len; i++) {
+        int result = parse(uploader, data[i]);
         if(result) return result;
     }
     return TSS_FIRMWARE_UPLOAD_IN_PROGRESS;
@@ -99,11 +97,9 @@ inline static int hexCharToValue(uint8_t c) {
 }
 
 inline static int hexStringToBytes(uint8_t *buffer, uint16_t buffer_size) {
-    int high, low;
-    uint32_t i, j = 0;
-    for(i = 0, j = 0; j < buffer_size; i++, j+= 2) {
-        high = hexCharToValue(buffer[j]);
-        low = hexCharToValue(buffer[j+1]);
+    for(uint32_t i = 0, j = 0; j < buffer_size; i++, j+= 2) {
+        int high = hexCharToValue(buffer[j]);
+        int low = hexCharToValue(buffer[j+1]);
         if(high < 0 || low < 0) return TSS_ERR_UNEXPECTED_CHARACTER;
         buffer[i] = (uint8_t)((high << 4) | (low));
     }
@@ -111,13 +107,12 @@ inline static int hexStringToBytes(uint8_t *buffer, uint16_t buffer_size) {
 }
 
 inline static int parseData(struct TSS_Firmware_Uploader *uploader, char c) {
-    int err;
     if(c != '<') {
         buffer_add(uploader, c);
     }
     if(uploader->index == uploader->buffer_size || c == '<') {
         if(uploader->index & 1) return TSS_ERR_FIRMWARE_UPLOAD_INVALID_FORMAT; //Must be a multiple of 2
-        err = hexStringToBytes(uploader->buffer, uploader->index);
+        int err = hexStringToBytes(uploader->buffer, uploader->index);
         if(err) return err;
         err = sensorBootloaderProgram(uploader->sensor, uploader->buffer, uploader->index / 2, uploader->timeout_program_ms);   
         if(err) {

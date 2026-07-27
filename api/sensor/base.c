@@ -261,7 +261,7 @@ int sensorBootloaderGetInfo(TSS_Sensor *sensor, struct TSS_Bootloader_Info *info
     return TSS_SUCCESS;
 }
 
-int sensorBootloaderProgram(TSS_Sensor *sensor, uint8_t *bytes, uint16_t num_bytes, uint32_t timeout_ms)
+int sensorBootloaderProgram(TSS_Sensor *sensor, const uint8_t *bytes, uint16_t num_bytes, uint32_t timeout_ms)
 {
     uint32_t i, cached_timeout;
     uint16_t checksum, num_bytes_converted;
@@ -356,14 +356,11 @@ void sensorInternalForceStopStreaming(TSS_Sensor *sensor)
 
 int sensorInternalReadStreamingBatch(TSS_Sensor *sensor, const struct TSS_Command *command, va_list outputs) {
     (void) command;
-    uint8_t checksum;
-    int err_or_checksum;
-    const struct TSS_Command **cur_slot;
     
-    checksum = 0;
-    cur_slot = sensor->streaming.data.commands;
+    uint8_t checksum = 0;
+    const struct TSS_Command **cur_slot = sensor->streaming.data.commands;
     while(*cur_slot != NULL) {
-        err_or_checksum = tssReadCommandVp(sensor->com, *cur_slot, &outputs);
+        int err_or_checksum = tssReadCommandVp(sensor->com, *cur_slot, &outputs);
         if(err_or_checksum < 0) {
             return err_or_checksum;
         }
@@ -377,15 +374,12 @@ int sensorInternalReadStreamingBatch(TSS_Sensor *sensor, const struct TSS_Comman
 int sensorInternalReadStreamingBatchArray(TSS_Sensor *sensor, const struct TSS_Command *command, void **outputs)
 {
     (void) command;
-    uint8_t checksum;
-    int err_or_checksum;
-    const struct TSS_Command **cur_slot;
     
-    checksum = 0;
-    cur_slot = sensor->streaming.data.commands;
+    uint8_t checksum = 0;
+    const struct TSS_Command **cur_slot = sensor->streaming.data.commands;
     uint16_t argindex = 0;
     while(*cur_slot != NULL) {
-        err_or_checksum = tssReadCommandArray(sensor->com, *cur_slot, &argindex, outputs);
+        int err_or_checksum = tssReadCommandArray(sensor->com, *cur_slot, &argindex, outputs);
         if(err_or_checksum < 0) {
             return err_or_checksum;
         }
@@ -397,14 +391,10 @@ int sensorInternalReadStreamingBatchArray(TSS_Sensor *sensor, const struct TSS_C
 }
 
 int sensorInternalReadStreamingBatchChecksumOnly(TSS_Sensor *sensor) {
-    uint8_t checksum;
-    int err_or_checksum;
-    const struct TSS_Command **cur_slot;
-
-    checksum = 0;
-    cur_slot = sensor->streaming.data.commands;
+    uint8_t checksum = 0;
+    const struct TSS_Command **cur_slot = sensor->streaming.data.commands;
     while(*cur_slot != NULL) {
-        err_or_checksum = tssReadCommandChecksumOnly(sensor->com, *cur_slot);
+        int err_or_checksum = tssReadCommandChecksumOnly(sensor->com, *cur_slot);
         if(err_or_checksum < 0) {
             return err_or_checksum;
         }
@@ -473,9 +463,8 @@ int sensorInternalUpdateLogStreaming(TSS_Sensor *sensor) {
 static int consumeDebugMessage(TSS_Sensor *sensor)
 {
     char buffer[40];
-    int result;
     while(!sensor->debug.message_processed) {
-        result = sensorProcessDebugCallbackOutput(sensor, buffer, sizeof(buffer));
+        int result = sensorProcessDebugCallbackOutput(sensor, buffer, sizeof(buffer));
         if(result < 0) {
             return result;
         }

@@ -201,7 +201,7 @@ static int peek(struct TSS_Com_Class *com, size_t start, size_t num_bytes, uint8
 static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, uint8_t *out, size_t size)
 {
     struct TSS_Managed_Com_Class *self = (struct TSS_Managed_Com_Class *)com;
-    size_t num_read, len;
+    size_t num_read;
     tss_time_t start_time;
     uint32_t timeout;
     bool done;
@@ -211,7 +211,7 @@ static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, ui
     timeout = self->child->api->in.get_timeout(self->child_container);
     start_time = tssTimeGet();
     while(!done && num_read < size && num_read + start < self->read_ring.capacity && tssTimeDiff(start_time) < timeout) {
-        len = length(com);
+        size_t len = length(com);
         while(num_read + start < len) {
             *out = ring_read(&self->read_ring, num_read + start);
             num_read++;
@@ -233,7 +233,7 @@ static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, ui
 
 inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
 {
-    size_t space, start_index, end_index, start_len, read_len;
+    size_t space, start_index, start_len, read_len;
     int result;
     uint32_t timeout;
 
@@ -262,7 +262,7 @@ inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
     if(read_len == start_len && space != 0) {
         //Read filling start of buffer up to the read index.
         //More to read possibly, fill from the start of the buffer now
-        end_index = ring_index(&com->read_ring, com->read_ring.r_index);
+        size_t end_index = ring_index(&com->read_ring, com->read_ring.r_index);
         result = com->child->api->in.read(com->child_container, end_index, com->read_ring.data);
         read_len = (size_t) result;
         if(result < 0) {
@@ -402,7 +402,6 @@ int tssManagedComBaseReadUntil(struct TSS_Com_Class *com, uint8_t value, uint8_t
     size_t num_read;
     tss_time_t start_time;
     uint32_t timeout;
-    int result;
 
     timeout = tss_com_get_timeout(com);
     start_time = tssTimeGet();
@@ -411,7 +410,7 @@ int tssManagedComBaseReadUntil(struct TSS_Com_Class *com, uint8_t value, uint8_t
     //Want to be able to poll instantly, will change back after
     tss_com_set_timeout(com, 0);
     while(num_read < size && tssTimeDiff(start_time) < timeout) {
-        result = tss_com_read(com, 1, out);
+        int result = tss_com_read(com, 1, out);
         if(result == 1) {
             num_read++;
             if(*out == value) {
@@ -447,7 +446,6 @@ void tssManagedComBaseClear(struct TSS_Com_Class *com)
 
 void tssManagedComBaseClearTimeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
 {
-    int len;
     uint8_t buffer[40];
     tss_time_t start, interval_start;
     uint32_t cached_timeout;
@@ -458,7 +456,7 @@ void tssManagedComBaseClearTimeout(struct TSS_Com_Class *com, uint32_t timeout_m
     start = tssTimeGet();
     interval_start = start;
     do {
-        len = tss_com_read(com, sizeof(buffer), buffer);
+        int len = tss_com_read(com, sizeof(buffer), buffer);
         if(len > 0) {
             interval_start = tssTimeGet();
         }

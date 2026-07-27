@@ -10,7 +10,7 @@ static enum TSS_DataCallbackState onStreamingPacket(TSS_Sensor *sensor)
     float quat[4], primary_accel[3];
     sensorProcessDataStreamingCallbackOutput(sensor, quat, primary_accel);
     printf("Streaming Result %d [%lu]:\n Quat: %f %f %f %f\nAccel: %f %f %f\n\n",
-        count++, sensorGetLastHeader(sensor).timestamp,
+        count++, (unsigned long)sensorGetLastHeader(sensor).timestamp,
         quat[0], quat[1], quat[2], quat[3],
         primary_accel[0], primary_accel[1], primary_accel[2]);
     return TSS_DataCallbackStateProcessed;
