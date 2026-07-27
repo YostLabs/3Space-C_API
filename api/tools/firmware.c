@@ -105,7 +105,7 @@ inline static int hexStringToBytes(uint8_t *buffer, uint16_t buffer_size) {
         high = hexCharToValue(buffer[j]);
         low = hexCharToValue(buffer[j+1]);
         if(high < 0 || low < 0) return TSS_ERR_UNEXPECTED_CHARACTER;
-        buffer[i] = (high << 4) | (low);
+        buffer[i] = (uint8_t)((high << 4) | (low));
     }
     return TSS_SUCCESS;
 }
@@ -139,20 +139,20 @@ inline static int processTag(struct TSS_Firmware_Uploader *uploader)
     int err;
     uploader->status = STATUS_NONE;
 
-    if(strcmp(uploader->buffer, "SetAddr") == 0) {
+    if(strcmp((char*)uploader->buffer, "SetAddr") == 0) {
         err = sensorBootloaderEraseFirmware(uploader->sensor, uploader->timeout_erase_ms);
         if(err) {
             return TSS_ERR_FIRMWARE_UPLOAD_ERASE;
         }
         return TSS_FIRMWARE_UPLOAD_IN_PROGRESS;
     }
-    else if(strcmp(uploader->buffer, "MemProgC") == 0) {
+    else if(strcmp((char*)uploader->buffer, "MemProgC") == 0) {
         uploader->status = STATUS_DATA;
         uploader->index = 0;
         uploader->packet_count = 0;
         return TSS_FIRMWARE_UPLOAD_IN_PROGRESS;
     }
-    else if(strcmp(uploader->buffer, "Run") == 0) {
+    else if(strcmp((char*)uploader->buffer, "Run") == 0) {
         err = sensorBootloaderLoadFirmware(uploader->sensor, uploader->timeout_load_firmware_ms);
         uploader->status = STATUS_COMPLETE;
         if(err) {

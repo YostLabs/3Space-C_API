@@ -2,11 +2,25 @@ cmake_minimum_required(VERSION 3.12.0)
 cmake_policy(SET CMP0077 NEW)  # option() honors normal variables set by set() in parent scope
 project(TSS_Api VERSION 0.1.0 LANGUAGES C CXX)
 
+# Warning flags — link any target PRIVATE to tss_warnings to opt in.
+add_library(tss_warnings INTERFACE)
+if(MSVC)
+    target_compile_options(tss_warnings INTERFACE /W4)
+else()
+    target_compile_options(tss_warnings INTERFACE
+        -Wall -Wextra -Wpedantic
+        -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes
+        -Wconversion -Wsign-conversion -Wnull-dereference
+        -Wdouble-promotion -Wformat=2 -Wundef
+    )
+endif()
+
 # Build the API Library
 add_library(TSS_Api SHARED)
 add_subdirectory(api)
 target_compile_definitions(TSS_Api PRIVATE TSS_API_EXPORTS)
 target_include_directories(TSS_Api PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(TSS_Api PRIVATE tss_warnings)
 
 # Build the Communication Class Libraries
 # Each library owns its sources, platform backend, includes, and external deps.

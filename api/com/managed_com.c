@@ -233,8 +233,8 @@ static int peek_until(struct TSS_Com_Class *com, size_t start, uint8_t value, ui
 
 inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
 {
-    size_t space, start_index, end_index, start_len;
-    int read_len;
+    size_t space, start_index, end_index, start_len, read_len;
+    int result;
     uint32_t timeout;
 
     space = ring_space(&com->read_ring);
@@ -248,8 +248,9 @@ inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
     start_index = ring_index(&com->read_ring, com->read_ring.w_index);
     start_len = com->read_ring.capacity - start_index;
     if(space < start_len) start_len = space; //Can't reach the end, the read index is in front of it
-    read_len = com->child->api->in.read(com->child_container, start_len, com->read_ring.data + start_index);
-    if(read_len < 0) {
+    result = com->child->api->in.read(com->child_container, start_len, com->read_ring.data + start_index);
+    read_len = (size_t)result;
+    if(result < 0) {
         read_len = 0;
     }
 
@@ -262,8 +263,9 @@ inline static void fill_in_buffer(struct TSS_Managed_Com_Class *com)
         //Read filling start of buffer up to the read index.
         //More to read possibly, fill from the start of the buffer now
         end_index = ring_index(&com->read_ring, com->read_ring.r_index);
-        read_len = com->child->api->in.read(com->child_container, end_index, com->read_ring.data);
-        if(read_len < 0) {
+        result = com->child->api->in.read(com->child_container, end_index, com->read_ring.data);
+        read_len = (size_t) result;
+        if(result < 0) {
             read_len = 0;
         }
 

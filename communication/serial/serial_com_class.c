@@ -16,7 +16,7 @@ static int write(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len);
 
 static int reenumerate(struct TSS_Com_Class *com, TssComAutoDetectCallback cb, void *detect_data);
 
-const static struct TSS_Com_Class_API m_serial_com_api = {
+static const struct TSS_Com_Class_API m_serial_com_api = {
     .open = open,
     .close = close,
 
@@ -41,12 +41,12 @@ const static struct TSS_Com_Class_API m_serial_com_api = {
 void create_serial_com_class(uint8_t port, struct SerialComClass *out)
 {
     *out = (struct SerialComClass) {
-        .port = {
-            .port = port,
-        },
         .serial_com = (struct TSS_Com_Class) {
             .api = &m_serial_com_api,
             .reenumerates = true,
+        },
+        .port = {
+            .port = port,
         },
     };
 
@@ -81,7 +81,7 @@ static int close(struct TSS_Com_Class *com)
 static int read(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *out)
 {
     struct SerialComClass *self = (struct SerialComClass *)com;
-    return serRead(&self->port, (char*)out, (uint32_t)num_bytes);
+    return (int)serRead(&self->port, (char*)out, (uint32_t)num_bytes);
 }
 
 static void set_timeout(struct TSS_Com_Class *com, uint32_t timeout_ms)
@@ -105,6 +105,7 @@ struct PortEnumerate {
 
 static uint8_t auto_detect(const char *name, uint8_t port, void *detect_data)
 {
+    (void) name;
     struct PortEnumerate *params = detect_data;
 
     //TSS_Com_Class is the first element of  SerialComClass, so this is a valid cast

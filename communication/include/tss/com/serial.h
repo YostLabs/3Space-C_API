@@ -21,8 +21,16 @@ struct SerialComClass {
 #endif
 };
 
-TSS_API void create_serial_com_class(uint8_t port, struct SerialComClass *out);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+TSS_API void create_serial_com_class(uint8_t port, struct SerialComClass *out);
 TSS_API int serial_com_auto_detect(struct TSS_Com_Class *out, TssComAutoDetectCallback cb, void *user_data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

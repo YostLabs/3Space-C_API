@@ -10,7 +10,7 @@ if(UNIX)
     target_include_directories(tss_linux_serial PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
     # TSS_Api is used internally to compile this library.
     # The consuming application is expected to link TSS_Api directly.
-    target_link_libraries(tss_linux_serial PRIVATE TSS_Api)
+    target_link_libraries(tss_linux_serial PRIVATE TSS_Api tss_warnings)
 endif()
 
 if(WIN32)
@@ -19,7 +19,7 @@ if(WIN32)
         serial/win_serial.c
     )
     target_include_directories(tss_win_serial PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(tss_win_serial PRIVATE TSS_Api)
+    target_link_libraries(tss_win_serial PRIVATE TSS_Api tss_warnings)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -45,6 +45,6 @@ if(TSS_COM_LINUX_SPI AND UNIX)
     )
     target_link_libraries(tss_linux_spi
         PUBLIC  ${GPIOD_LIBRARIES}  # must propagate: static libs require transitive link deps
-        PRIVATE TSS_Api             # used internally; consumer links TSS_Api directly
+        PRIVATE TSS_Api tss_warnings
     )
 endif()

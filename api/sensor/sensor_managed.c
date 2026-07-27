@@ -506,7 +506,7 @@ static int awaitGetSettingResponse(TSS_Sensor *sensor, uint16_t min_len, bool ch
         }
 
         if(check_bootloader) {
-            tss_com_peek(sensor->com, 0, 2, boot_check);
+            tss_com_peek(sensor->com, 0, 2, (uint8_t*)boot_check);
             if(strcmp(boot_check, "OK") == 0) {
                 return THREESPACE_AWAIT_BOOTLOADER_FOUND;
             }
@@ -525,7 +525,7 @@ static int awaitGetSettingResponse(TSS_Sensor *sensor, uint16_t min_len, bool ch
         }
 
         //Check to see if the response after the ID looks like a setting
-        num_read_or_err = tss_com_peek_until(sensor->com, TSS_BINARY_SETTINGS_ID_SIZE, '\0', buffer, sizeof(buffer));
+        num_read_or_err = tss_com_peek_until(sensor->com, TSS_BINARY_SETTINGS_ID_SIZE, '\0', (uint8_t*)buffer, sizeof(buffer));
         if(num_read_or_err <= 0) {
             if(num_read_or_err == TSS_ERR_INSUFFICIENT_BUFFER) {
                 //Not enough room to peek the full key, so have to assume it is a success...
@@ -669,7 +669,7 @@ static int peekCheckDebugMessage(TSS_Sensor *sensor) {
         peek_len = (uint8_t)com_length;
     }
 
-    err_or_num_read = tss_com_peek(sensor->com, 0, peek_len, buffer);
+    err_or_num_read = tss_com_peek(sensor->com, 0, peek_len, (uint8_t*)buffer);
     if(err_or_num_read <= 0) {
         return TSS_ERR_READ;
     }
@@ -745,5 +745,10 @@ int sensorInternalBootloaderCheckActive(TSS_Sensor *sensor, uint8_t *active)
 
     return result;
 }
+
+#else
+
+/* Dummy variable to prevent empty translation unit warning under ISO C */
+typedef int tss_dummy_managed_sensor_tu;
 
 #endif /* !TSS_MINIMAL_SENSOR */

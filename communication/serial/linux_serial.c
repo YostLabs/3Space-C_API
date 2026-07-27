@@ -208,7 +208,7 @@ uint8_t serEnumeratePorts(uint8_t (*cb)(const char *name, uint8_t port, void *us
             if(encoded > 255) break;
 
             char full_path[64];
-            snprintf(full_path, sizeof(full_path), "/dev/%s", entry->d_name);
+            snprintf(full_path, sizeof(full_path), "/dev/%.58s", entry->d_name);
 
             ports_discovered++;
             if(cb(full_path, (uint8_t)encoded, user_data) == SER_ENUM_STOP) {

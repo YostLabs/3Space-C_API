@@ -46,10 +46,10 @@ uint8_t tssHeaderSizeFromBitfield(uint8_t bitfield)
 void tssHeaderFromBytes(const struct TSS_Header_Info *info, uint8_t *data, struct TSS_Header *out)
 {
     if(info->bitfield & TSS_HEADER_STATUS_BIT) {
-        out->status = *data++;
+        out->status = (int8_t)*data++;
     }
     if(info->bitfield & TSS_HEADER_TIMESTAMP_BIT) {
-        out->timestamp = data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;
+        out->timestamp = (uint32_t)data[0] | (uint32_t)data[1] << 8 | (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
         data += 4;
     }
     if(info->bitfield & TSS_HEADER_ECHO_BIT) {
@@ -59,11 +59,11 @@ void tssHeaderFromBytes(const struct TSS_Header_Info *info, uint8_t *data, struc
         out->checksum = *data++;
     }
     if(info->bitfield & TSS_HEADER_SERIAL_BIT) {
-        out->serial = data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;
+        out->serial = (uint32_t)data[0] | (uint32_t)data[1] << 8 | (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
         data += 4;
     }
     if(info->bitfield & TSS_HEADER_LENGTH_BIT) {
-        out->length = data[0] | data[1] << 8;
+        out->length = (uint16_t)(((uint32_t)data[0]) | ((uint32_t)data[1]) << 8);
         data += 2;
     }
 }

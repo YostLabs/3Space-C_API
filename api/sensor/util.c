@@ -10,7 +10,7 @@ int tssUtilStreamSlotStringToCommands(const char *str, const struct TSS_Command*
     while(*str && num_slots_read < TSS_NUM_STREAM_SLOTS) {
         slot.cmd_num = (uint8_t)strtol(str, (char**)&str, 10);
         if(*str == ':') {
-            *str++;
+            str++;
             slot.param = (uint8_t)strtol(str, (char**)&str, 10);
             slot.has_param = true;
         }

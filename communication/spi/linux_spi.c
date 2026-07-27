@@ -130,7 +130,7 @@ int spiWrite(struct SpiDevice *dev, const uint8_t *data, size_t len)
     gpiod_line_set_value(dev->cs_line, 0); // Set CS low
     uint8_t send_len = 0;
     while(len > 0) {
-        send_len = (len > 255) ? 255 : len;
+        send_len = (len > 255) ? 255 : (uint8_t)len;
         write_header[1] = send_len;
         
         xfer[0].tx_buf = (unsigned long)write_header;
@@ -179,6 +179,8 @@ int spiBasicRead(struct SpiDevice *dev, uint8_t *out, size_t len)
 
 int spiReadNoIrq(struct SpiDevice *dev, uint8_t *out, uint8_t length, uint32_t timeout_ms)
 {
+    (void) timeout_ms;
+    
     if (length == 0) return 0;
     // Send READ_DATA_WITH_SIZE command followed by the requested byte count.
     uint8_t header[2] = { TSS_TRANSACTION_READ_DATA_WITH_SIZE_BYTE, length };
@@ -194,7 +196,6 @@ int spiReadNoIrq(struct SpiDevice *dev, uint8_t *out, uint8_t length, uint32_t t
         gpiod_line_set_value(dev->cs_line, 1); // Set CS high
         gpiod_line_set_value(dev->cs_line, 0); // Set CS low
 
-        uint32_t remaining = timeout_ms - elapsed_time;
         memset(header, 0xFF, sizeof(header));
         spiBasicRead(dev, header, sizeof(header));
 

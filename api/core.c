@@ -300,9 +300,9 @@ int tssGetSettingsReadCb(struct TSS_Com_Class *com, TssGetSettingsCallback callb
     enum TSS_SettingsCallbackState cb_state;
     const char *key;
     const struct TSS_Setting *setting;
-    uint8_t len, checksum;
+    uint8_t checksum;
     bool end_reached;
-    int err;
+    int len, err;
     
     //Initialize unchanging values
     cb_info.checksum = &checksum;
@@ -311,7 +311,7 @@ int tssGetSettingsReadCb(struct TSS_Com_Class *com, TssGetSettingsCallback callb
     checksum = 0;
     end_reached = false;
     while(!end_reached) {
-        len = tss_com_read_until(com, '\0', buffer, sizeof(buffer));
+        len = tss_com_read_until(com, '\0', (uint8_t*)buffer, sizeof(buffer));
         key = buffer;
 
         //Failed to read or find key
@@ -352,7 +352,7 @@ int tssGetSettingsReadCb(struct TSS_Com_Class *com, TssGetSettingsCallback callb
         }
 
         //Read in the byte that determines if done or more to parse
-        len = tss_com_read(com, 1, buffer);
+        len = tss_com_read(com, 1, (uint8_t*)buffer);
         if(len != 1) return TSS_ERR_READ;
 
         //Process that byte
@@ -366,7 +366,7 @@ int tssGetSettingsReadCb(struct TSS_Com_Class *com, TssGetSettingsCallback callb
     }
 
     //Read in the checksum and validate
-    len = tss_com_read(com, 1, buffer);
+    len = tss_com_read(com, 1, (uint8_t*)buffer);
     if(len != 1) {
         return TSS_ERR_READ;
     }
@@ -461,7 +461,7 @@ int tssGetSettingsReadArray(struct TSS_Com_Class *com, uint16_t *num_read, void 
 
 int tssSetSettingsWrite(struct TSS_Com_Class *com, bool header, const char **keys, uint8_t num_keys, const void **data)
 {
-    const static uint8_t separator = TSS_SETTING_SEPARATOR;
+    static const uint8_t separator = TSS_SETTING_SEPARATOR;
     const uint8_t start_byte = (header) ? TSS_BINARY_WRITE_SETTINGS_HEADER_START_BYTE : TSS_BINARY_WRITE_SETTINGS_START_BYTE;
 
     const struct TSS_Setting *setting;
@@ -504,7 +504,7 @@ int tssSetSettingsWrite(struct TSS_Com_Class *com, bool header, const char **key
 int tssSetSettingsRead(struct TSS_Com_Class *com, struct TSS_Setting_Response *response)
 {
     uint8_t data[TSS_SETTING_RESPONSE_SIZE];
-    uint8_t len;
+    int len;
 
     len = tss_com_read(com, TSS_SETTING_RESPONSE_SIZE, data);
     if(len != TSS_SETTING_RESPONSE_SIZE) {
@@ -519,7 +519,7 @@ int tssSetSettingsRead(struct TSS_Com_Class *com, struct TSS_Setting_Response *r
     }
 
     *response = (struct TSS_Setting_Response) {
-        .error = data[0],
+        .error = (int8_t)data[0],
         .num_success = data[1]
     };
 
@@ -565,7 +565,7 @@ inline static void send_param(struct TSS_Com_Class *com, const struct TSS_Param 
     bool is_str;
 
     is_str = TSS_PARAM_IS_STRING(cur_param);
-    param_len = (is_str) ? strlen(raw_data) + 1 : cur_param->size * cur_param->count;
+    param_len = (is_str) ? strlen((const char*)raw_data) + 1 : cur_param->size * cur_param->count;
 
     for(i = 0; i < param_len; i++) {
         *checksum += raw_data[i];
@@ -618,7 +618,8 @@ int tssReadParams(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, 
 
 int tssReadParamsVp(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum, va_list *args)
 {
-    uint32_t str_len, len, i;
+    uint32_t str_len;
+    int32_t len, i;
     
     while(!TSS_PARAM_IS_NULL(cur_param)) {
         uint8_t *out = (uint8_t*) va_arg(*args, void*);
@@ -670,7 +671,7 @@ int tssReadParamsArray(struct TSS_Com_Class *com, const struct TSS_Param *cur_pa
 {
     uint16_t _argindex = 0;
     uintptr_t str_len;
-    uint32_t len, i;
+    int len, i;
 
     if(argindex == NULL) argindex = &_argindex;
     
@@ -715,8 +716,8 @@ int tssReadParamsArray(struct TSS_Com_Class *com, const struct TSS_Param *cur_pa
 int tssReadParamsChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Param *cur_param, uint8_t *checksum)
 {
     uint8_t buffer[40]; //Will read at most 40 bytes at a time
-    uint16_t param_size, len;
-    uint8_t i;
+    uint16_t param_size;
+    int len, i;
 
     while(!TSS_PARAM_IS_NULL(cur_param)) {
         if(TSS_PARAM_IS_STRING(cur_param)) {
@@ -734,14 +735,14 @@ int tssReadParamsChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Param 
             param_size = cur_param->count * cur_param->size;
             while(param_size > 0) {
                 len = (param_size < sizeof(buffer)) ? param_size : sizeof(buffer);
-                len = tss_com_read(com, len, buffer);
+                len = tss_com_read(com, (size_t)len, buffer);
                 if(len <= 0) {
                     return TSS_ERR_READ;
                 }
                 for(i = 0; i < len; i++) {
                     *checksum += buffer[i];
                 }
-                param_size -= len;
+                param_size -= (uint16_t)len;
             }
         }
         cur_param++;
@@ -753,13 +754,13 @@ int tssReadParamsChecksumOnly(struct TSS_Com_Class *com, const struct TSS_Param 
 int tssReadBytesChecksumOnly(struct TSS_Com_Class *com, size_t num_bytes, uint8_t *checksum)
 {
     uint8_t buffer[40]; //Will read at most 40 bytes at a time
-    size_t read_len, num_read;
-    uint8_t i;
+    size_t read_len;
+    int num_read, i;
 
     while(num_bytes > 0) {
         read_len = (num_bytes > sizeof(buffer)) ? (uint16_t)sizeof(buffer) : num_bytes;
         num_read = tss_com_read(com, read_len, buffer);
-        if(read_len != num_read) {
+        if(read_len != (size_t)num_read) {
             return TSS_ERR_READ;
         }
         if(checksum != NULL) {

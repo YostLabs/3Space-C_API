@@ -168,4 +168,9 @@ int sensorBootloaderIsActive(TSS_Sensor *sensor, uint8_t *active)
     return sensorInternalBootloaderCheckActive(sensor, active);
 }
 
+#else
+
+/* Dummy variable to prevent empty translation unit warning under ISO C */
+typedef int tss_dummy_minimal_sensor_tu;
+
 #endif /* TSS_MINIMAL_SENSOR */

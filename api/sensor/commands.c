@@ -47,6 +47,9 @@ int sensorFileStreamingStart(TSS_Sensor *sensor, TssDataCallback cb, uint64_t *o
         sensor->streaming.file.active = true;
         sensor->streaming.file.cb = cb;
         sensor->streaming.file.remaining_len = file_len;
+        if(out_size != NULL) {
+            *out_size = file_len;
+        }
     }
     return err;
 }

@@ -25,7 +25,7 @@
 (const struct TSS_Command[]) { \
             {   \
                 .num = _num, \
-                .out_format = (const struct TSS_Param[]){ _out_format, NULL_PARAM }    \
+                .out_format = (const struct TSS_Param[]){ _out_format, NULL_PARAM },    \
                 .in_format = (const struct TSS_Param[]){ _in_format, NULL_PARAM }    \
             }  \
         }   
@@ -34,19 +34,21 @@
 #define CMD_START(_num, _name) [_num] = (const struct TSS_Command[]) { {.num = _num, 
 #define CMD_END } },
 
+#define NO_OUTPUT .out_format = NULL,
+#define NO_INPUT .in_format = NULL,
 #define OUTPUT(...) .out_format = (const struct TSS_Param[]){ __VA_ARGS__, NULL_PARAM },
 #define INPUT(...) .in_format = (const struct TSS_Param[]){ __VA_ARGS__, NULL_PARAM },
 
 //Useful for things that frequently have the same input and output, EG settings
 #define TYPE(...) OUTPUT(__VA_ARGS__) INPUT(__VA_ARGS__)
 
-#define ACTION_CMD(_num, _name) CMD_START((_num), (_name)) CMD_END
-#define READ_CMD(_num, _name, ...) CMD_START((_num), (_name)) OUTPUT(__VA_ARGS__) CMD_END
-#define WRITE_CMD(_num, _name, ...) CMD_START((_num), (_name)) INPUT(__VA_ARGS__) CMD_END
+#define ACTION_CMD(_num, _name) CMD_START((_num), (_name)) NO_INPUT NO_OUTPUT CMD_END
+#define READ_CMD(_num, _name, ...) CMD_START((_num), (_name)) NO_INPUT OUTPUT(__VA_ARGS__) CMD_END
+#define WRITE_CMD(_num, _name, ...) CMD_START((_num), (_name)) INPUT(__VA_ARGS__) NO_OUTPUT CMD_END
 //No RW cmd because the input types are frequently different from the output, unlike settings
 //It is just considered a base cmd.
 
-const static struct TSS_Command * const m_commands[256] = {
+static const struct TSS_Command * const m_commands[256] = {
 //-------------------------AUTO GENERATED COMMANDS START---------------------------------------
 
     READ_CMD(0, "GetTaredOrientation", FLOAT(4))
@@ -251,7 +253,7 @@ void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uin
             uncapped = 1;
         }
 
-        size += params->count * params->size;
+        size += (uint16_t)(params->count * params->size);
         params++;
     }
 
@@ -263,14 +265,14 @@ void tssGetParamListSize(const struct TSS_Param *params, uint16_t *min_size, uin
 #define SETTING_END },
 
 #define RW_SETTING(_name, ...) SETTING_START((_name)) TYPE(__VA_ARGS__) SETTING_END
-#define R_SETTING(_name, ...) SETTING_START((_name)) OUTPUT(__VA_ARGS__) SETTING_END
-#define W_SETTING(_name, ...) SETTING_START((_name)) INPUT(__VA_ARGS__) SETTING_END
-#define CMD_SETTING(_name) SETTING_START((_name)) .in_format = (const struct TSS_Param[]){ NULL_PARAM }, SETTING_END
+#define R_SETTING(_name, ...) SETTING_START((_name)) NO_INPUT OUTPUT(__VA_ARGS__) SETTING_END
+#define W_SETTING(_name, ...) SETTING_START((_name)) INPUT(__VA_ARGS__) NO_OUTPUT SETTING_END
+#define CMD_SETTING(_name) SETTING_START((_name)) .in_format = (const struct TSS_Param[]){ NULL_PARAM }, NO_OUTPUT SETTING_END
 
 //Aggregate settings technically don't need to be in the setting table because there is no information needed
 //for them other then the string. However, it is still nice for thoroughness and the ability to identify all available
 //settings. However, things like Query Settings won't be in the table of course since those are purely dynamic
-#define AGGREGATE_SETTING(_name) SETTING_START((_name)) .out_format = (const struct TSS_Param[]){ NULL_PARAM }, SETTING_END
+#define AGGREGATE_SETTING(_name) SETTING_START((_name)) NO_INPUT .out_format = (const struct TSS_Param[]){ NULL_PARAM }, SETTING_END
 
 static const struct TSS_Setting m_settings[] = {
 //-------------------------AUTO GENERATED SETTINGS START---------------------------------------

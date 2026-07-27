@@ -41,13 +41,13 @@ static const struct TSS_Com_Class_API m_spi_com_api = {
 void create_spi_com_class(SpiPortId id, uint32_t speed_hz, struct SpiComClass *out)
 {
     *out = (struct SpiComClass) {
-        .device = {
-            .id = id,
-            .speed_hz = speed_hz,
-        },
         .spi_com = (struct TSS_Com_Class) {
             .api          = &m_spi_com_api,
             .reenumerates = false,
+        },
+        .device = {
+            .id = id,
+            .speed_hz = speed_hz,
         },
     };
 

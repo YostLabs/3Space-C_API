@@ -20,6 +20,10 @@ struct SpiComClass {
 #endif
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Initialises a SpiComClass for the SPI device at the given port ID.
  * The device is not opened until the com class open() function is called.
@@ -29,4 +33,7 @@ struct SpiComClass {
  */
 TSS_API void create_spi_com_class(SpiPortId id, uint32_t speed_hz, struct SpiComClass *out);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* __SPI_COM_CLASS_H__ */

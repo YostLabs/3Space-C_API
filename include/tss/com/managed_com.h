@@ -23,7 +23,7 @@
 #include "tss/com/com_class.h"
 #include "tss/utility/ring_buf2.h"
 
-#if __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -55,7 +55,7 @@ TSS_API int tssManagedComBaseReadUntil(struct TSS_Com_Class *com, uint8_t value,
 TSS_API void tssManagedComBaseClear(struct TSS_Com_Class *com);
 TSS_API void tssManagedComBaseClearTimeout(struct TSS_Com_Class *com, uint32_t timeout_ms);
 
-#if __cplusplus
+#ifdef __cplusplus
 }
 #endif
 
