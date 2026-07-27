@@ -62,7 +62,7 @@ int sensorFileStreamingStop(TSS_Sensor *sensor) {
 int sensorFileReadBytes(TSS_Sensor *sensor, uint16_t len, uint8_t *out_data) {
     //Build a version of the command with the out format set based on the incoming length
     struct TSS_Command readBytesCommand = *tssGetCommand(177);
-    struct TSS_Param params[] = { TSS_PARAM(1, len, TSS_ParamTypeBlob), TSS_PARAM_NULL };
+    const struct TSS_Param params[] = { TSS_PARAM(1, len, TSS_ParamTypeBlob), TSS_PARAM_NULL };
     readBytesCommand.out_format = params;
     return sensorInternalExecuteCommand(sensor, &readBytesCommand, (const void*[]) { &len }, out_data);
 }

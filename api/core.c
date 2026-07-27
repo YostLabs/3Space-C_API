@@ -144,8 +144,7 @@ int tssPeekValidateCommand(struct TSS_Com_Class *com,
 }
 
 int tssPeekCommandChecksum(struct TSS_Com_Class *com, uint16_t start, uint16_t len) {
-    uint8_t j, checksum, data[40]; //Read 40 bytes at a time
-    int num_read;
+    uint8_t checksum, data[40]; //Read 40 bytes at a time
 
     checksum = 0;
     for(uint16_t i = 0; i < len; i+= sizeof(data)) {
@@ -156,7 +155,7 @@ int tssPeekCommandChecksum(struct TSS_Com_Class *com, uint16_t start, uint16_t l
         }
 
         //Peek in that amount, and validate it was successful
-        num_read = tss_com_peek(com, i + start, read_len, data);
+        int num_read = tss_com_peek(com, i + start, read_len, data);
         if(num_read != read_len) {
             if(num_read < 0) {
                 return num_read;
@@ -165,7 +164,7 @@ int tssPeekCommandChecksum(struct TSS_Com_Class *com, uint16_t start, uint16_t l
         }
 
         //Add to the checksum
-        for(j = 0; j < num_read; j++) {
+        for(uint8_t j = 0; j < num_read; j++) {
             checksum += data[j];
         }
     }
@@ -191,7 +190,7 @@ size_t tssBuildGetSettingsStringV(char *out, size_t out_size, uint16_t count, va
 {
     size_t out_len = 0;
     for(uint16_t param_i = 0; param_i < count; param_i++) {
-        char *key = va_arg(args, char*);
+        const char *key = va_arg(args, char*);
         size_t key_len = strlen(key);
         
         if(param_i > 0) { //Insert Separator
@@ -564,6 +563,7 @@ inline static void send_param(struct TSS_Com_Class *com, const struct TSS_Param 
         //Have to send each part of the param 1 at a time because need
         //to swap endianess, but the incoming data is const, so not allowed to modify it there
         for(uint8_t element = 0; element < cur_param->count; element++) {
+            // cppcheck-suppress uninitvar
             uint8_t conversion[8]; //Max U64 is 8 bytes
             //Swap endianess
             for(uint8_t i = 0; i < cur_param->size; i++) {

@@ -56,7 +56,7 @@ inline static void ring_clear(struct TSS_Ring_Buf2 *ring)
     ring_advance(ring, ring_size(ring));
 }
 
-inline static uint8_t ring_read(struct TSS_Ring_Buf2 *ring, size_t index) {
+inline static uint8_t ring_read(const struct TSS_Ring_Buf2 *ring, size_t index) {
     return ring->data[ring_index(ring, index + ring->r_index)];
 }
 

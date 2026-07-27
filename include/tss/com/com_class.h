@@ -149,6 +149,7 @@ struct TSS_Output_Stream {
      * @param com This com object.
      * @param bytes Data to send.
      * @param len Number of bytes located at \p bytes to send.
+     * @note If len==0, this function should assume bytes may be NULL/unintialized and simply return success.
      * @return 0 on success, non-zero on error (len > available_space)
      */
     int (*write)(struct TSS_Com_Class *com, const uint8_t *bytes, size_t len);
