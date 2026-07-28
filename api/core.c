@@ -563,13 +563,13 @@ inline static void send_param(struct TSS_Com_Class *com, const struct TSS_Param 
         //Have to send each part of the param 1 at a time because need
         //to swap endianess, but the incoming data is const, so not allowed to modify it there
         for(uint8_t element = 0; element < cur_param->count; element++) {
-            // cppcheck-suppress uninitvar
             uint8_t conversion[8]; //Max U64 is 8 bytes
             //Swap endianess
             for(uint8_t i = 0; i < cur_param->size; i++) {
                 conversion[i] = raw_data[cur_param->size-1-i];
             }
 
+            // cppcheck-suppress uninitvar
             tss_com_write(com, conversion, cur_param->size);
 
             //Advance to the next element
