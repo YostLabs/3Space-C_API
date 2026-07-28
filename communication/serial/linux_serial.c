@@ -146,7 +146,7 @@ void serClear(struct SerialDevice *ser)
     tcflush(ser->fd, TCIFLUSH);
 }
 
-uint32_t serGetTimeout(struct SerialDevice *ser)
+uint32_t serGetTimeout(const struct SerialDevice *ser)
 {
     if(!ser->blocking) return 0;
     return ser->timeout;

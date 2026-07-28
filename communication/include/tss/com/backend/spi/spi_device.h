@@ -60,7 +60,7 @@ int spiReadNoIrq(struct SpiDevice *dev, uint8_t *out, uint8_t length, uint32_t t
 int spiRead(struct SpiDevice *dev, size_t num_bytes, uint8_t *out);
 
 /** @return Current timeout in milliseconds (0 = non-blocking). */
-uint32_t spiGetTimeout(struct SpiDevice *dev);
+uint32_t spiGetTimeout(const struct SpiDevice *dev);
 
 /** @brief Sets the timeout used by spiRead (milliseconds; 0 = non-blocking). */
 void spiSetTimeout(struct SpiDevice *dev, uint32_t timeout_ms);

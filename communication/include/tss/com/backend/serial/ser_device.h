@@ -19,7 +19,7 @@ uint32_t serWrite(struct SerialDevice *ser, const char *buffer, uint32_t len);
 uint32_t serRead(struct SerialDevice *ser, char *buffer, uint32_t len);
 void serClear(struct SerialDevice *ser);
 
-uint32_t serGetTimeout(struct SerialDevice *ser);
+uint32_t serGetTimeout(const struct SerialDevice *ser);
 void serSetTimeout(struct SerialDevice *ser, uint32_t timeout_ms);
 
 const char * serPortToName(uint8_t port, char *out, size_t size);

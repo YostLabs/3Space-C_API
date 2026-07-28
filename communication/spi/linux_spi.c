@@ -262,7 +262,7 @@ int spiRead(struct SpiDevice *dev, size_t num_bytes, uint8_t *out)
 // Timeout accessors
 // -----------------------------------------------------------------------
 
-uint32_t spiGetTimeout(struct SpiDevice *dev)
+uint32_t spiGetTimeout(const struct SpiDevice *dev)
 {
     return dev->timeout;
 }

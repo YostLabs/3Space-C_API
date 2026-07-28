@@ -140,7 +140,7 @@ static void serSetActualTimeout(struct SerialDevice *ser, uint32_t timeout_ms)
     SetCommTimeouts(ser->handle, &timeouts);
 }
 
-uint32_t serGetTimeout(struct SerialDevice *ser)
+uint32_t serGetTimeout(const struct SerialDevice *ser)
 {
     if(!ser->blocking) return 0;
     return ser->timeout; 
