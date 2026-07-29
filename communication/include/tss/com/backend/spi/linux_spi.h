@@ -4,10 +4,20 @@
 #include <stdint.h>
 #include <gpiod.h>
 
+/*
+* device_name, chip_path, and cs_line_num are required to create a SpiDevice.
+* data_available_line_num and data_loaded_line_num are optional, but if provided, will be
+* used to configure the data_available_line and data_loaded_line GPIO lines for the device
+* and the read_fn.
+*/
 struct SpiDeviceInfo {
     char *device_name;
     char *chip_path;
     unsigned int cs_line_num;
+
+    // Optional, so can be negative
+    int data_available_line_num;
+    int data_loaded_line_num;
 };
 
 /*
@@ -24,6 +34,8 @@ struct SpiDevice {
     //Manual Chip Select (Required because Linux SPI driver does not wait long enough after asserting CS before reading the first byte)
     struct gpiod_chip *chip;
     struct gpiod_line *cs_line;
+    struct gpiod_line *data_available_line;
+    struct gpiod_line *data_loaded_line;
 
     //Configuration parameters for the SPI device
     uint32_t speed_hz;

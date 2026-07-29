@@ -65,4 +65,17 @@ uint32_t spiGetTimeout(const struct SpiDevice *dev);
 /** @brief Sets the timeout used by spiRead (milliseconds; 0 = non-blocking). */
 void spiSetTimeout(struct SpiDevice *dev, uint32_t timeout_ms);
 
+/**
+ * @brief Optionally sets up pins to utilize the data available and data loaded GPIO IRQ lines from the sensor.
+ * This is not required for operation, but may improve performance and reduce CPU usage by allowing the
+ * host to wait for a signal rather than repeatedly polling the sensor for data. This is primarily advantageous
+ * when expecting low data rates from the sensor. At high data rates, then sensor will almost always have
+ * data available, so additionally checking the IRQ lines is not necessary and may even reduce performance.
+ * @param data_available_line_num GPIO pin number for the Data Available line from the sensor. Set to -1 to disable.
+ * @param data_loaded_line_num GPIO pin number for the Data Loaded line from the sensor. Set to -1 to disable.
+ * @note The best read function will be set based on the provided pins. In general, provide None, just data_available, or both.
+ * @return 0 on success, non-zero on error.
+ */
+int spiConfigurePinMode(struct SpiDevice *dev, int data_available_line_num, int data_loaded_line_num);
+
 #endif /* __TSS_SPI_DEVICE_H__ */
