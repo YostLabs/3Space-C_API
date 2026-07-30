@@ -48,3 +48,29 @@ if(TSS_COM_LINUX_SPI AND UNIX)
         PRIVATE TSS_Api tss_warnings
     )
 endif()
+
+# ---------------------------------------------------------------------------
+# I2C Com Libraries
+# ---------------------------------------------------------------------------
+# Opt in to I2C support by setting -DTSS_COM_LINUX_I2C=ON (or toggling in cmake-gui).
+# This is gated behind an option so that libgpiod is not required on serial-only builds.
+# If this is missing, run: sudo apt install libgpiod-dev
+option(TSS_COM_LINUX_I2C "Enable the Linux I2C communication class" OFF)
+
+if(TSS_COM_LINUX_I2C AND UNIX)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GPIOD REQUIRED libgpiod)
+
+    add_library(tss_linux_i2c STATIC EXCLUDE_FROM_ALL
+        i2c/i2c_com_class.c
+        i2c/linux_i2c.c
+    )
+    target_include_directories(tss_linux_i2c 
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+        PRIVATE ${GPIOD_INCLUDE_DIRS}
+    )
+    target_link_libraries(tss_linux_i2c
+        PUBLIC  ${GPIOD_LIBRARIES}
+        PRIVATE TSS_Api tss_warnings
+    )
+endif()

@@ -26,6 +26,7 @@ target_link_libraries(TSS_Api PRIVATE tss_warnings)
 # Each library owns its sources, platform backend, includes, and external deps.
 # Enable optional com classes that have external dependencies here.
 set(TSS_COM_LINUX_SPI ON)  # ON requires libgpiod (sudo apt install libgpiod-dev) when on Linux
+set(TSS_COM_LINUX_I2C ON)
 add_subdirectory(communication)
 
 # Build the Executable
